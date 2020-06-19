@@ -1,0 +1,175 @@
+//初始化css
+body {
+  margin: 0;
+  padding: 0;
+  // font-family: 12px/1.5 helvetica, arial, "Microsoft YaHei", \5b8b\4f53;
+  -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+}
+
+
+table, td, tr, th {
+  font-size: 12px;
+}
+
+ol, ul {
+  list-style: none;
+}
+
+li {
+  list-style-type: none;
+}
+
+img {
+  vertical-align: top;
+  border: 0;
+  max-width: 100%;
+  height: auto;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: inherit;
+  font-weight: normal;
+}
+
+address, cite, code, em, th, i, var {
+  font-weight: normal;
+  font-style: normal;
+}
+
+.clearfix {
+  *zoom: 1;
+}
+
+//清除浮动
+.clearfix:after {
+  content: "";
+  background: none;
+  border: 0;
+  clear: both;
+  display: block;
+  float: none;
+  font-size: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  width: 0;
+  height: 0;
+}
+
+a:link, a:visited {
+  color: #000;
+  text-decoration: none;
+}
+
+input {
+  outline: 0;
+  outline: none;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+//项目个性化
+html, body {
+  height: 100%;
+  color: white;
+
+  i {
+    color: white;
+    width: 24px;
+    vertical-align: middle;
+    font-style: normal;
+    font-weight: 400;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    display: inline-block;
+    font-smoothing: antialiased;
+  }
+}
+
+#app {
+  height: 100%;
+
+  & > div {
+    height: 100%;
+
+    & > section {
+      height: 100%;
+
+      aside {
+        height: 100%;
+
+        & > div {
+          height: 100%;
+        }
+      }
+
+      header {
+        padding: 0;
+      }
+
+      main {
+        padding: 12px;
+
+        & > div {
+          box-shadow: 0 0 8px 2px #ffbb7494;
+        }
+      }
+    }
+  }
+}
+
+//隐藏el-scrollbar的横向滚动条
+.el-scrollbar__wrap {
+  overflow-x: hidden;
+  //background-color: rgb(17, 38, 69);
+
+  .el-menu {
+    border-right: none;
+    background-color: transparent !important;
+  }
+}
+
+.el-scrollbar {
+  height: 100%;
+
+  .is-vertical {
+    height: 100%;
+  }
+}
+
+.el-scrollbar__bar {
+  z-index: 3;
+}
+
+.el-select-dropdown {
+  .el-scrollbar__wrap {
+    overflow-x: scroll;
+  }
+}
+
+.org-tree-node-label .org-tree-node-label-inner{
+  padding: 6px 0 !important;
+  font-size: 16px;
+  border: 1px solid orange;
+}
+.org-tree-node.is-leaf, .org-tree-node.collapsed{
+  padding-right: 0 !important;
+}
+.org-tree-node:not(:first-child):before, .org-tree-node:not(:last-child):after{
+  border-top: 1px solid orange !important;
+}
+.org-tree-node:after{
+  border-left: 1px solid orange !important;
+}
+.org-tree > .org-tree-node:after{
+  height: 0;
+}

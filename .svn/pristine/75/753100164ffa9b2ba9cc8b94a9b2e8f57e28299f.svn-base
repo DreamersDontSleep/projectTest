@@ -1,0 +1,226 @@
+<template>
+    <div>
+        <div class="feature-header">
+            <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+                <el-form-item label="国家：">
+                    <el-select v-model="searchForm.country" placeholder="请选择国家">
+                        <el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button @click="search">查询</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+        <div class="feature-content">
+            <div id="myChart"></div>
+        </div>
+    </div>
+</template>
+
+<script>
+    import {getCountryList} from 'api/common.js'
+    import {getElectionProfile} from 'api/politics.js'
+
+    export default {
+        name: 'Election',
+        data() {
+            return {
+                colors: ['#19d4ae', '#5ab1ef', '#fa6e86', '#ffb980', '#0067a6', '#c4b4e4'],
+
+                countryList: [],
+                dialogVisible: false,
+                loading: false,
+                total: 0,
+                searchForm: {
+                    country: '',
+                },
+                electionData: [],
+                electionLinks: [],
+            }
+        },
+        created() {
+            getCountryList().then(res => {
+                this.countryList = res.data;
+                this.searchForm.country = this.countryList[0];
+                this.getElectionProfileData();
+            });
+        },
+        methods: {
+            search() {
+                this.getElectionProfileData();
+            },
+            initChart() {
+                const myChart = this.$echarts.init(document.getElementById('myChart'));
+                const option = {
+                    tooltip: {
+                        trigger: 'item',
+                        triggerOn: 'mousemove'
+                    },
+                    series: [
+                        {
+                            type: 'sankey',
+                            data: this.electionData,
+                            links: this.electionLinks,
+                            focusNodeAdjacency: true,
+                            levels: [{
+                                depth: 0,
+                                itemStyle: {
+                                    color: '#fbb4ae'
+                                },
+                                lineStyle: {
+                                    color: 'source',
+                                    opacity: 0.6
+                                }
+                            }, {
+                                depth: 1,
+                                itemStyle: {
+                                    color: '#b3cde3'
+                                },
+                                lineStyle: {
+                                    color: 'source',
+                                    opacity: 0.6
+                                }
+                            }, {
+                                depth: 2,
+                                itemStyle: {
+                                    color: '#ccebc5'
+                                },
+                                lineStyle: {
+                                    color: 'source',
+                                    opacity: 0.6
+                                }
+                            }, {
+                                depth: 3,
+                                itemStyle: {
+                                    color: '#decbe4'
+                                },
+                                lineStyle: {
+                                    color: 'source',
+                                    opacity: 0.6
+                                }
+                            }],
+                            lineStyle: {
+                                curveness: 0.5
+                            }
+                        }
+                    ]
+                }
+                myChart.setOption(option);
+                window.onresize = function () {
+                    myChart.resize();
+                }
+            },
+            getElectionProfileData() {
+                getElectionProfile(this.searchForm).then(res => {
+                    if (this.$check.isNullData(res)) {
+
+                        this.electionData = [{
+                            name: '暂无数据',
+                        }, {
+                            name: '暂无选举'
+                        }];
+                        this.electionLinks = [{
+                            source: '暂无数据',
+                            target: '暂无选举',
+                            value: 1
+                        }];
+                        return
+                    }
+                    this.electionData = [];
+                    this.electionLinks = [];
+                    res.data.forEach(cur => {
+                        this.electionData.push({
+                            name: cur.country
+                        });
+                        cur.elections.forEach(elec => {
+                            this.electionData.push({
+                                name: elec.name
+                            });
+                            this.electionLinks.push({
+                                source: cur.country,
+                                target: elec.name,
+                                value: 1
+                            });
+                            elec.positions.forEach(po => {
+                                this.electionData.push({
+                                    name: po.position
+                                });
+                                this.electionLinks.push({
+                                    source: elec.name,
+                                    target: po.position,
+                                    value: 1
+                                });
+                                po.candidates.forEach(ca => {
+                                    this.electionData.push({
+                                        name: ca.candidateName
+                                    });
+                                    this.electionLinks.push({
+                                        source: po.position,
+                                        target: ca.candidateName,
+                                        value: ca.votes
+                                    });
+                                })
+                            })
+                        });
+                    })
+                }).catch(() => {
+                    this.electionData = [{
+                        name: '暂无数据',
+                    }, {
+                        name: '暂无选举'
+                    }];
+                    this.electionLinks = [{
+                        source: '暂无数据',
+                        target: '暂无选举',
+                        value: 1
+                    }];
+                }).finally(() => {
+                    this.$nextTick(() => {
+                        this.initChart();
+                    })
+                })
+            },
+        }
+    }
+</script>
+
+<style scoped lang="scss">
+    /deep/ i {
+        color: #666
+    }
+
+    .table-expand {
+        font-size: 0;
+    }
+
+    .table-expand label {
+        width: 90px;
+        color: #99a9bf;
+    }
+
+    .table-expand .el-form-item {
+        margin-right: 0;
+        margin-bottom: 0;
+        width: 30%;
+    }
+
+    .feature-header {
+        border-left: 4px solid #f8690d;
+        padding-left: 14px;
+        background-color: #f8690d0a;
+    }
+
+    .el-form-item {
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+
+    .feature-content {
+        #myChart {
+            width: 100%;
+            height: 500px;
+        }
+    }
+
+</style>

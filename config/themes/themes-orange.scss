@@ -1,0 +1,23 @@
+//登陆页面背景
+$orange-bg-img: url('~assets/images/bg.jpg');
+//登陆页面表单背景
+$orange-form-bg-img: url("~assets/images/login-form.png");
+//登陆按钮颜色
+$orange-login-button-border: #FF5501;
+$orange-login-button: #fa8927;
+//字体颜色
+$orange-login-label-color: rgba(255, 121, 2, 1);
+
+
+//系统logo
+$orange-logo: url('~assets/images/sidebarLogo.png');
+//顶栏颜色
+$orange-navbar-color: linear-gradient(to top, rgba(255, 222, 155, 1), rgba(254, 84, 0, 1));
+//侧边栏背景颜色
+$orange-aside-color: linear-gradient(to bottom, rgba(254, 181, 78, 1), rgba(247, 91, 1, 1));
+//侧边栏hover颜色
+$orange-aside-hover-color: rgba(248, 103, 40, 1);
+//菜单激活颜色(菜单字体颜色)
+$orange-aside-active-color: rgba(252, 255, 64, 1);
+//侧边栏折叠后展开的二级菜单背景颜色
+$orange-aside-fold-color: rgba(251, 135, 36, 1);

@@ -1,0 +1,326 @@
+<template>
+	<div>
+		<div class="search-header">
+			<el-form :inline="true" :model="searchForm" class="demo-form-inline">
+				<el-form-item label="国家：">
+					<el-select v-model="searchForm.country" placeholder="请选择国家">
+						<el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+					</el-select>
+				</el-form-item>
+				<!-- <el-form-item label="时间区间：">
+					<el-date-picker
+						v-model="searchForm.date"
+						type="daterange"
+						:picker-options="pickerOptions"
+						range-separator="至"
+						start-placeholder="开始日期"
+						end-placeholder="结束日期"
+						align="center"
+					>
+					</el-date-picker> -->
+				</el-form-item>
+				<el-form-item>
+					<el-button @click="search">查询</el-button>
+				</el-form-item>
+			</el-form>
+		</div>
+		<div class="feature-content">
+			<div class="age">
+				<el-table
+					ref="table"
+					height="0"
+					v-height-adaptive
+					v-loading="loading"
+					:data="tableData"
+					border
+					style="width: 100%"
+				>
+					<el-table-column align="center" label="日期">
+						<template slot-scope="scope">
+							<span>{{ scope.row.createTime }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column align="center" label="国家">
+						<template slot-scope="scope">
+							<span>{{ scope.row.country }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column align="center" label="网站名称">
+						<template slot-scope="scope">
+							<span>{{ scope.row.hostName }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column align="center" label="网站地址">
+						<template slot-scope="scope">
+							<span>{{ scope.row.website }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column align="center" label="网站访问比例" width="120">
+						<template slot-scope="scope">
+							<span>{{ scope.row.web }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column align="center" label="页面访问比例" width="120">
+						<template slot-scope="scope">
+							<span>{{ scope.row.page }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column align="center" label="操作">
+						<template slot-scope="scope">
+							<el-button size="mini" @click="showTrend(scope.row)">网站访问趋势</el-button>
+						</template>
+					</el-table-column>
+				</el-table>
+				<el-pagination
+					style="text-align: right;margin-top: 12px;"
+					background
+					@size-change="handleSizeChange"
+					@current-change="handleCurrentChange"
+					:current-page="searchForm.pageNum"
+					:page-sizes="[10, 20, 30, 40]"
+					layout="sizes, prev, pager, next, jumper"
+					:total="total"
+				>
+				</el-pagination>
+			</div>
+		</div>
+		<!--趋势-->
+		<el-dialog :title="trendTitle" :visible.sync="dialogVisible" width="60%">
+			<ve-line
+				height="400px"
+				:judge-width="true"
+				:resizeable="true"
+				:colors="colors"
+				:legend="legend"
+				:extend="Gdpextend"
+				:tooltip="lineTooltip"
+				:yAxis="yAxisBillion"
+				:grid="grid"
+				:data="trendData"
+			></ve-line>
+		</el-dialog>
+	</div>
+</template>
+
+<script>
+	import { colors, bgColor } from "config/base.js";
+	import mixin from "components/mixins";
+	import { sliceShow } from "utils/common.js";
+	import { getCountryList } from "api/common.js";
+	import { getWeb, getIP } from "api/polls.js";
+
+	export default {
+		name: "People",
+		mixins: [mixin],
+		data() {
+			return {
+				countryList: [],
+				dialogVisible: false,
+				loading: true,
+				pickerOptions: {
+					shortcuts: [
+						{
+							text: "最近一周",
+							onClick(picker) {
+								const end = new Date();
+								const start = new Date();
+								start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+								picker.$emit("pick", [start, end]);
+							},
+						},
+						{
+							text: "最近一个月",
+							onClick(picker) {
+								const end = new Date();
+								const start = new Date();
+								start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+								picker.$emit("pick", [start, end]);
+							},
+						},
+						{
+							text: "最近三个月",
+							onClick(picker) {
+								const end = new Date();
+								const start = new Date();
+								start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+								picker.$emit("pick", [start, end]);
+							},
+						},
+					],
+				},
+				total: 0,
+				searchForm: {
+					country: "",
+					// date: "",
+					pageNum: 1,
+					pageSize: 10,
+				},
+				tableData: [],
+				trendTitle: "",
+				trendData: {
+					columns: ["日期", "访问量"],
+					rows: [],
+				},
+			};
+		},
+		created() {
+			getCountryList().then((res) => {
+				this.countryList = res.data;
+			});
+			let searchData = this.getSearchData();
+			this.getWebAccessData(searchData);
+		},
+		methods: {
+			search() {
+				let searchData = this.getSearchData();
+				this.getWebAccessData(searchData);
+			},
+			getSearchData() {
+				// let startTime = this.searchForm.date[0];
+				// let endTime = this.searchForm.date[1];
+				let searchData = {
+					country: this.searchForm.country,
+					pageSize: this.searchForm.pageSize,
+					pageNum: this.searchForm.pageNum
+					// startTime: startTime ? this.$moment(startTime).format("YYYY-MM-DD HH:mm:ss") : "",
+					// endTime: endTime ? this.$moment(endTime).format("YYYY-MM-DD HH:mm:ss") : "",
+				};
+				return searchData;
+			},
+			getWebAccessData(data) {
+				getWeb(data)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.tableData = [];
+							return;
+						}
+						this.total = res.data.total;
+						delete res.data.total;
+						let dataArr = Object.values(res.data);
+						console.log(dataArr);
+						let arr = [];
+						for (let i of dataArr) {
+							i.forEach((cur) => {
+								arr.push(cur);
+							});
+						}
+						this.$refs["table"].bodyWrapper.scrollTop = 0;
+						this.tableData = arr;
+						this.loading = false;
+					})
+					.catch((err) => {
+						this.tableData = [];
+						this.loading = false;
+					});
+			},
+			showTrend(data) {
+				this.trendTitle = data.hostName;
+				getIP({ hostName: data.hostName })
+					.then((res) => {
+						this.trendData.rows = [];
+						if (this.$check.isNullData(res)) {
+							this.$message({
+								showClose: true,
+								message: "暂无数据",
+							});
+							return;
+						}
+						let data = Object.values(res.data);
+						data[0].forEach((cur) => {
+							this.trendData.rows.push({
+								日期: cur.week,
+								访问量: cur.num,
+							});
+						});
+						this.dialogVisible = true;
+					})
+					.catch((err) => {
+						this.loading = false;
+						this.$message({
+							showClose: true,
+							message: "暂无数据",
+						});
+					});
+			},
+			handleSizeChange(val) {
+				this.$refs.table.bodyWrapper.scrollTop = 0;
+				this.searchForm.pageSize = val;
+				this.searchForm.pageNum = 1;
+				let searchData = this.getSearchData();
+				this.getWebAccessData(searchData);
+			},
+			handleCurrentChange(val) {
+				this.$refs.table.bodyWrapper.scrollTop = 0;
+				this.searchForm.pageNum = val;
+				let searchData = this.getSearchData();
+				this.getWebAccessData(searchData);
+			},
+		},
+	};
+</script>
+
+<style scoped lang="scss">
+	.feature-header {
+		border-left: 4px solid #f8690d;
+		padding-left: 14px;
+		background-color: #f8690d0a;
+	}
+
+	.el-form-item {
+		margin-top: 8px;
+		margin-bottom: 8px;
+	}
+
+	.feature-content {
+		font-size: 16px;
+		color: #f8690d;
+
+		.age,
+		.employment {
+			margin-top: 12px;
+		}
+
+		.age-chart {
+			color: #303133;
+			padding: 0 12px;
+
+			span {
+				vertical-align: middle;
+				display: inline-block;
+				height: 24px;
+			}
+
+			.age-part {
+				width: 100%;
+				text-align: center;
+				color: #ff8130;
+			}
+
+			.male,
+			.female {
+				border-radius: 2px;
+				color: white;
+				box-sizing: border-box;
+			}
+
+			.male {
+				text-align: right;
+				padding-right: 32px;
+				background-color: rgba(90, 177, 239, 1);
+			}
+
+			.female {
+				padding-left: 32px;
+				background-color: rgba(250, 110, 134, 1);
+			}
+		}
+	}
+
+	.left-title {
+		margin-right: 4px;
+	}
+
+	.right-title {
+		margin-left: 4px;
+	}
+</style>

@@ -1,0 +1,229 @@
+//初始化css
+body {
+  margin: 0;
+  padding: 0;
+  // font-family: 12px/1.5 helvetica, arial, "Microsoft YaHei", \5b8b\4f53;
+  -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+}
+
+
+table, td, tr, th {
+  font-size: 12px;
+}
+
+ol, ul {
+  list-style: none;
+}
+
+li {
+  list-style-type: none;
+}
+
+img {
+  vertical-align: top;
+  border: 0;
+  max-width: 100%;
+  height: auto;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: inherit;
+  font-weight: normal;
+}
+
+address, cite, code, em, th, i, var {
+  font-weight: normal;
+  font-style: normal;
+}
+
+.clearfix {
+  *zoom: 1;
+}
+
+//清除浮动
+.clearfix:after {
+  content: "";
+  background: none;
+  border: 0;
+  clear: both;
+  display: block;
+  float: none;
+  font-size: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  width: 0;
+  height: 0;
+}
+
+a:link, a:visited {
+  color: #000;
+  text-decoration: none;
+}
+
+input {
+  outline: 0;
+  outline: none;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+//项目个性化
+html, body {
+  height: 100%;
+  color: white;
+
+  i {
+    color: white;
+    width: 24px;
+    vertical-align: middle;
+    font-style: normal;
+    font-weight: 400;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    display: inline-block;
+    font-smoothing: antialiased;
+  }
+}
+
+#app {
+  height: 100%;
+
+  & > div {
+    height: 100%;
+
+    & > section {
+      height: 100%;
+
+      aside {
+        height: 100%;
+
+        & > div {
+          height: 100%;
+        }
+      }
+
+      header {
+        padding: 0;
+      }
+
+      main {
+        padding: 12px;
+
+        & > div {
+          box-shadow: 0 0 8px 2px #ffbb7494;
+        }
+      }
+    }
+  }
+}
+
+//隐藏el-scrollbar的横向滚动条
+.el-scrollbar__wrap {
+  overflow-x: hidden;
+  //background-color: rgb(17, 38, 69);
+
+  .el-menu {
+    border-right: none;
+    background-color: transparent !important;
+  }
+}
+
+.el-scrollbar {
+  height: 100%;
+
+  .is-vertical {
+    height: 100%;
+  }
+}
+
+.el-scrollbar__bar {
+  z-index: 3;
+}
+
+.el-select-dropdown {
+  .el-scrollbar__wrap {
+    overflow-x: scroll;
+  }
+}
+
+.org-tree-node-label .org-tree-node-label-inner{
+  padding: 6px 0 !important;
+  font-size: 16px;
+  border: 1px solid orange;
+}
+// .org-tree-node.is-leaf, .org-tree-node.collapsed{
+//   padding-right: 0 !important;
+// }
+.org-tree-node:not(:first-child):before, .org-tree-node:not(:last-child):after{
+  border-top: 1px solid orange !important;
+}
+.org-tree-node:after{
+  border-left: 1px solid orange !important;
+}
+.org-tree > .org-tree-node:after{
+  height: 0;
+}
+/* 用户管理 */
+.el-table .cell{
+  line-height: 38px;
+  font-size: 14px;
+}
+.el-table td{
+  padding: 5px 0;
+}
+.el-table th,.el-table__header tr{
+  background: -webkit-gradient(linear,left top,left bottom,from(#fe8e58),to(#fffcdb));
+  background: linear-gradient(180deg,#fe8e58,#fffcdb);
+}
+.el-message-box__header{
+  background: -webkit-gradient(linear,left top,right top,from(#eb5c43),to(#fc8235));
+  background: linear-gradient(90deg,#eb5c43,#fc8235);
+}
+.el-message-box__header .el-message-box__title,.el-message-box__header .el-icon-close{
+  color: #fff!important;
+}
+/* 系统图标 */
+/* 政情分析 */
+/* .el-icon-general{
+  // background: url('../assets/svg/politics/general.svg');
+}
+.el-icon-party{
+  background: url('../assets/svg/politics/party.svg');
+}
+.el-icon-election{
+  background: url('../assets/svg/politics/election.svg');
+}
+.el-icon-strategy{
+  background: url('../assets/svg/politics/strategy.svg');
+}
+/* 军情分析 */
+/* .el-icon-tracking{
+  background: url('../assets/svg/militia/tracking.svg');
+}
+.el-icon-activity{
+  background: url('../assets/svg/militia/activity.svg');
+}
+.el-icon-opinion{
+  background: url('../assets/svg/militia/opinion.svg');
+} */
+/* 社情分析 */
+/* .el-icon-feature{
+  background: url('../assets/svg/social/feature.svg');
+}
+.el-icon-contradiction{
+  background: url('../assets/svg/social/contradiction.svg');
+}
+.el-icon-safety{
+  background: url('../assets/svg/social/safety.svg');
+} */ 
+/* 民意分析 */

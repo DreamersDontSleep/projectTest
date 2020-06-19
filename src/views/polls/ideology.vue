@@ -1,0 +1,259 @@
+<template>
+	<div>
+		<div class="search-header">
+			<el-form :inline="true" :model="searchForm" class="demo-form-inline">
+				<el-form-item label="国家：">
+					<el-select v-model="searchForm.country" placeholder="请选择国家">
+						<el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+					</el-select>
+				</el-form-item>
+				<el-form-item>
+					<el-button @click="search">查询</el-button>
+				</el-form-item>
+			</el-form>
+		</div>
+		<div class="main-content carousel">
+			<div class="content">
+				<div class="chart">
+					<div class="title">意识统计</div>
+					<ve-ring
+						height="calc(100% - 24px)"
+						:judge-width="true"
+						:resizeable="true"
+						:colors="colors"
+						:extend="extend"
+						:settings="trendChartSettings"
+						:data="ideaData"
+					></ve-ring>
+				</div>
+				<el-divider direction="vertical"></el-divider>
+				<div class="info">
+					<div class="info-title">统计信息</div>
+					<el-scrollbar :native="false" :noresize="false">
+						<ul>
+							<li
+								v-for="(item, index) in ideaEssay"
+								:key="item.uuid"
+								@click="showEssay(item, '意识形态')"
+							>
+								<el-tooltip
+									v-if="colorList[item.type].length > 4"
+									class="title"
+									effect="dark"
+									:content="colorList[item.type]"
+									placement="left"
+								>
+									<span
+										class="title"
+										:style="{ 'background-color': colorMatch[colorList[item.type]] }"
+										>{{ colorList[item.type] }}</span
+									>
+								</el-tooltip>
+								<span
+									v-else
+									class="title"
+									:style="{ 'background-color': colorMatch[colorList[item.type]] }"
+									>{{ colorList[item.type] }}</span
+								>
+								<span>{{ item.time + "&nbsp" + item.content }}</span>
+							</li>
+						</ul>
+					</el-scrollbar>
+					<!-- :hide-on-single-page="true" -->
+					<el-pagination
+						:pager-count="5"
+						style="text-align: right;margin-top: 12px;"
+						background
+						@size-change="handleSizeChange"
+						@current-change="handleCurrentChange"
+						:current-page="searchForm.pageNum"
+						:page-sizes="[20, 30, 50, 80]"
+						layout="sizes, prev, pager, next"
+						:total="total"
+					>
+					</el-pagination>
+				</div>
+			</div>
+		</div>
+
+		<!--        文章显示-->
+		<el-dialog class="read-dialog" :title="readTitle" :visible.sync="dialogVisible" width="800px">
+			<span class="read-text">{{ dialogText }}</span>
+		</el-dialog>
+	</div>
+</template>
+
+<script>
+	import { colors } from "config/base.js";
+	import { sliceShow, concatBy } from "utils/common.js";
+	import mixin from "components/mixins";
+	import { getCountryList } from "api/common.js";
+	import { getIdeology, getStatics } from "api/polls.js";
+
+	export default {
+		name: "Ideology",
+		mixins: [mixin],
+		data() {
+			this.colorMatch = {
+				政治: colors[0],
+				经济: colors[1],
+				文化: colors[2],
+				宗教: colors[3],
+			};
+			this.extend = {
+				series: {
+					type: "pie",
+					roseType: "radius",
+					radius: [0, "60%"],
+					
+					//标签
+					label: {
+						show: true,
+						position: "outside",
+						formatter: "{b}", //模板变量有 {a}、{b}、{c}、{d}，分别表示系列名，数据名，数据值，百分比。{d}数据会根据value值计算百分比
+					},
+					itemStyle: {
+						color: (seriesIndex) => {
+							return this.colorMatch[seriesIndex.name];
+						},
+					},
+				},
+			};
+			return {
+				countryList: [],
+				searchForm: {
+					country: "",
+					pageNum: 1,
+					pageSize: 20,
+					parentType: "意识形态",
+				},
+				total: 0,
+				//文章弹窗
+				dialogVisible: false,
+				dialogText: "",
+				readTitle: "",
+				ideaData: {
+					columns: ["意识形态", "数量"],
+					rows: [],
+				},
+				ideaEssay: [],
+			};
+		},
+		computed: {
+			colorList() {
+				return {
+					0: "政治",
+					1: "经济",
+					3: "文化",
+					2: "宗教",
+				};
+			},
+		},
+		created() {
+			getCountryList().then((res) => {
+				this.countryList = res.data;
+				this.searchForm.country = "美国";
+				this.getData(this.searchForm);
+				this.getTypeData();
+			});
+		},
+		methods: {
+			//切换
+			switchItem(val) {
+				this.activItem = val;
+				this.$refs["carousel"].setActiveItem(val);
+			},
+			//切换
+			carouselChange(index) {
+				this.activItem = this.items[index];
+			},
+			//展示文章
+			showEssay(content, name) {
+				console.log(content);
+				this.dialogVisible = true;
+				this.readTitle = name + " - " + content.country;
+				this.dialogText = content.content;
+			},
+			search() {
+				this.getData(this.searchForm);
+				this.getTypeData();
+			},
+			getTypeData() {
+				getStatics({ id: 1 })
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.ideaData.rows = [
+								{
+									意识形态: "暂无数据",
+									数量: 0,
+								},
+							];
+							return;
+						}
+						let allData = res.data;
+						this.ideaData.rows = [];
+						let nationArr = [];
+						for (let key in allData) {
+							let data = allData[key];
+							this.ideaData.columns.push(key);
+							nationArr.push({
+								意识形态: key,
+								数量: data,
+							});
+						}
+						this.ideaData.rows = nationArr;
+					})
+					.catch(() => {
+						this.ideaData.rows = [
+							{
+								意识形态: "暂无数据",
+								数量: 0,
+							},
+						];
+					});
+			},
+			getData(data) {
+				getIdeology(data)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.ideaEssay = [{ country: "无", content: "暂无数据", time: "" }];
+							return;
+						}
+						this.ideaEssay = [];
+						let allData = res.data;
+						this.total = allData.count;
+						delete allData.count;
+						for (let key in allData) {
+							allData[key].forEach((cur) => {
+								this.ideaEssay.push({
+									country: cur.country,
+									content: cur.content,
+									time: cur.time,
+									type: cur.childType,
+								});
+							});
+						}
+					})
+					.catch((err) => {
+						this.ideaEssay = [{ country: "无", content: "暂无数据", time: "" }];
+					});
+			},
+			handleSizeChange(val) {
+				this.searchForm.pageSize = val;
+				this.searchForm.pageNum = 1;
+				this.getData(this.searchForm);
+			},
+			handleCurrentChange(val) {
+				this.searchForm.pageNum = val;
+				this.getData(this.searchForm);
+			},
+		},
+	};
+</script>
+
+<style scoped lang="scss">
+	ul {
+		margin: 0;
+		padding: 0;
+	}
+</style>

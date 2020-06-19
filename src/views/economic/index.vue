@@ -1,0 +1,1362 @@
+<template>
+	<div>
+		<div class="search-header">
+			<el-form :inline="true" :model="searchForm" class="demo-form-inline" style="display:inline-block">
+				<el-form-item label="国家：">
+					<el-select v-model="searchForm.country" placeholder="请选择国家">
+						<el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+					</el-select>
+				</el-form-item>
+				<el-form-item>
+					<el-button @click="search">查询</el-button>
+				</el-form-item>
+			</el-form>
+		</div>
+		<div class="main-content">
+			<div class="carousel-switch-items clearfix">
+				<span :class="activItem === 'income' ? 'actived' : ''" @click="switchItem('income')">生活指数</span>
+				<span :class="activItem === 'stock' ? 'actived' : ''" @click="switchItem('stock')">股票指数</span>
+				<span :class="activItem === 'inflation' ? 'actived' : ''" @click="switchItem('inflation')"
+					>通货膨胀</span
+				>
+				<span :class="activItem === 'amount' ? 'actived' : ''" @click="switchItem('amount')">对外贸易</span>
+				<span :class="activItem === 'GDP' ? 'actived' : ''" @click="switchItem('GDP')">生产总值</span>
+				<span :class="activItem === 'trend' ? 'actived' : ''" @click="switchItem('trend')">经济趋势</span>
+			</div>
+			<el-scrollbar :native="false" :noresize="false">
+				<!--滚动图-->
+				<el-carousel
+					:interval="3000000"
+					:autoplay="false"
+					class="carousel"
+					indicator-position="none"
+					ref="carousel"
+				>
+					<el-carousel-item v-for="item in items" :key="item" :name="item">
+						<div v-if="'trend' === item" class="content">
+							<div class="chart">
+								<div class="title">经济信息</div>
+								<div class="trend-chart">
+									<ve-ring
+										height="100%"
+										:colors="colors"
+										:judge-width="true"
+										:resizeable="true"
+										:settings="trendChartSettings"
+										:graphic="graphic"
+										:data="chartData"
+									></ve-ring>
+								</div>
+								<div class="progress">
+									<el-progress
+										type="circle"
+										:width="90"
+										:color="[{ color: colors[0] }]"
+										:percentage="trendProgress.increase"
+										:format="progressFormat1"
+									></el-progress>
+									<el-progress
+										type="circle"
+										:width="90"
+										:percentage="trendProgress.stable"
+										:color="[{ color: colors[1] }]"
+										:format="progressFormat2"
+									></el-progress>
+									<el-progress
+										type="circle"
+										:width="90"
+										:color="[{ color: colors[2] }]"
+										:percentage="trendProgress.decline"
+										:format="progressFormat3"
+									></el-progress>
+								</div>
+							</div>
+							<el-divider direction="vertical"></el-divider>
+							<div class="info">
+								<div class="info-title">信息统计</div>
+								<el-scrollbar :native="false" :noresize="false">
+									<ul>
+										<li
+											v-for="(item, index) in economicEssay"
+											:key="item.uuid"
+											@click="showEssay(item, '经济趋势')"
+										>
+											<el-tooltip
+												v-if="trendMatch[item.zType] > 4"
+												class="title"
+												effect="dark"
+												:content="item.country"
+												placement="left"
+											>
+												<span
+													class="title"
+													:style="{ 'background-color': colorMatch[item.zType] }"
+													>{{ economicName+trendMatch[item.zType] }}</span
+												>
+											</el-tooltip>
+											<span
+												v-else
+												class="title"
+												:style="{ 'background-color': colorMatch[item.zType] }"
+												>{{ economicName+trendMatch[item.zType] }}</span
+											>
+											<span>{{ item.time + "&nbsp" + item.content }}</span>
+										</li>
+									</ul>
+								</el-scrollbar>
+								<el-pagination
+									:pager-count="5"
+									style="text-align: right;margin-top: 12px;"
+									background
+									@size-change="trendSizeChange"
+									@current-change="trendCurrentChange"
+									:current-page="trendForm.pageNum"
+									:page-sizes="[20, 30, 50, 80]"
+									layout="sizes, prev, pager, next"
+									:total="trendTotal"
+								>
+								</el-pagination>
+							</div>
+						</div>
+						<div v-if="'GDP' === item" class="content">
+							<div class="chart">
+								<div class="title">总值趋势</div>
+								<ve-line
+									height="100%"
+									:judge-width="true"
+									:resizeable="true"
+									:colors="colors"
+									:legend="legend"
+									:extend="Gdpextend"
+									:tooltip="lineTooltip"
+									:xAxis="xAxisYear"
+									:yAxis="yAxisBillion"
+									:grid="grid"
+									:data="GDPdata"
+								></ve-line>
+							</div>
+							<el-divider direction="vertical"></el-divider>
+							<div class="info">
+								<div class="info-title">信息统计</div>
+								<el-scrollbar :native="false" :noresize="false">
+									<ul>
+										<li
+											v-for="(item, index) in GDPEssay"
+											:key="item.uuid"
+											@click="showEssay(item, '生产总值')"
+										>
+											<el-tooltip
+												v-if="String(item.time).length >= 11"
+												class="title"
+												effect="dark"
+												:content="item.time"
+												placement="left"
+											>
+												<span class="title" :style="{ 'background-color': '#2F4554' }">{{
+													item.time
+												}}</span>
+											</el-tooltip>
+											<span v-else class="title" :style="{ 'background-color': '#2F4554' }">{{
+												item.time
+											}}</span>
+											<span>{{ item.content }}</span>
+										</li>
+									</ul>
+								</el-scrollbar>
+								<el-pagination
+									:pager-count="5"
+									style="text-align: right;margin-top: 12px;"
+									background
+									@size-change="GDPSizeChange"
+									@current-change="GDPCurrentChange"
+									:current-page="GDPForm.pageNum"
+									:page-sizes="[20, 30, 50, 80]"
+									layout="sizes, prev, pager, next"
+									:total="GDPTotal"
+								>
+								</el-pagination>
+							</div>
+						</div>
+						<div v-if="'amount' === item" class="content content-has-title">
+							<div class="chart">
+								<div class="title switch-title">
+									贸易金额
+									<span :class="amount === 'plus' ? 'actived' : ''" @click="amountSwitch('plus')"
+										>进出口差额</span
+									>
+									<span :class="amount === 'export' ? 'actived' : ''" @click="amountSwitch('export')"
+										>出口总额</span
+									>
+									<span :class="amount === 'import' ? 'actived' : ''" @click="amountSwitch('import')"
+										>进口总额</span
+									>
+								</div>
+								<ve-line
+									height="100%"
+									:judge-width="true"
+									:resizeable="true"
+									:colors="colors"
+									:grid="grid"
+									:legend="legend"
+									:tooltip="lineTooltip"
+									:xAxis="xAxisYear"
+									:yAxis="yAxisBillion"
+									:data="lineData"
+									:events="chartEvents"
+								></ve-line>
+							</div>
+							<el-divider direction="vertical"></el-divider>
+							<div class="amount-info">
+								<div class="export">
+									<div class="title">出口总额Top10</div>
+									<el-scrollbar :native="false" :noresize="false">
+										<div class="amount-content" v-for="(item, index) in exportData" :key="index">
+											<span>{{ index + 1 + "-" + item.name }}</span>
+											<el-progress
+												:text-inside="true"
+												:color="ColorF(index)"
+												:stroke-width="20"
+												:percentage="item.value"
+												:format="progressFormat4"
+												status="exception"
+											></el-progress>
+										</div>
+									</el-scrollbar>
+								</div>
+								<div class="import">
+									<div class="title">进口总额Top10</div>
+									<el-scrollbar :native="false" :noresize="false">
+										<div class="amount-content" v-for="(item, index) in importData" :key="index">
+											<span>{{ index + 1 + "-" + item.name }}</span>
+											<el-progress
+												:text-inside="true"
+												:color="ColorF(index)"
+												:stroke-width="20"
+												:percentage="item.value"
+												:format="progressFormat4"
+												status="exception"
+											></el-progress>
+										</div>
+									</el-scrollbar>
+								</div>
+							</div>
+						</div>
+						<div v-if="'inflation' === item" class="content">
+							<div class="chart">
+								<div class="title">膨胀趋势</div>
+								<ve-line
+									height="100%"
+									:judge-width="true"
+									:resizeable="true"
+									:colors="colors"
+									:extend="inflationExtend"
+									:legend="legend"
+									:tooltip="lineTooltip"
+									:grid="grid"
+									:xAxis="xAxisMonth"
+									:yAxis="yAxisRatio"
+									:data="inflationData"
+								></ve-line>
+							</div>
+							<el-divider direction="vertical"></el-divider>
+							<div class="info">
+								<div class="info-title">信息统计</div>
+								<el-scrollbar :native="false" :noresize="false">
+									<ul>
+										<li
+											v-for="item in inflationEssay"
+											:key="item.uuid"
+											@click="showEssay(item, '通货膨胀')"
+										>
+											<el-tooltip
+												v-if="String(item.time).length >= 11"
+												class="title"
+												effect="dark"
+												:content="item.time"
+												placement="left"
+											>
+												<span class="title" :style="{ 'background-color': '#2F4554' }">{{
+													item.time
+												}}</span>
+											</el-tooltip>
+											<span v-else class="title" :style="{ 'background-color': '#2F4554' }">{{
+												item.time
+											}}</span>
+											<span>{{ item.content }}</span>
+										</li>
+									</ul>
+								</el-scrollbar>
+								<el-pagination
+									:pager-count="5"
+									style="text-align: right;margin-top: 12px;"
+									background
+									@size-change="inflationSizeChange"
+									@current-change="inflationCurrentChange"
+									:current-page="inflationForm.pageNum"
+									:page-sizes="[20, 30, 50, 80]"
+									layout="sizes, prev, pager, next"
+									:total="inflationTotal"
+								>
+								</el-pagination>
+							</div>
+						</div>
+						<div v-if="'stock' === item" class="content">
+							<div class="chart">
+								<div class="title">指数统计</div>
+								<ve-histogram
+									height="100%"
+									:judge-width="true"
+									:resizeable="true"
+									:colors="colors"
+									:legend="legend"
+									:extend="stockExtend"
+									:yAxis="yAxis"
+									:tooltip="barTooltip"
+									:grid="grid"
+									:data="stockData"
+								></ve-histogram>
+							</div>
+							<el-divider direction="vertical"></el-divider>
+							<div class="info">
+								<div class="info-title">信息统计</div>
+								<el-scrollbar :native="false" :noresize="false">
+									<ul>
+										<li
+											v-for="item in stockEssay"
+											:key="item.uuid"
+											@click="showEssay(item, '股票指数')"
+										>
+											<el-tooltip
+												v-if="String(item.time) >= 11"
+												class="title"
+												effect="dark"
+												:content="item.time"
+												placement="left"
+											>
+												<span class="title" :style="{ 'background-color': '#2F4554' }">{{
+													item.time
+												}}</span>
+											</el-tooltip>
+											<span v-else class="title" :style="{ 'background-color': '#2F4554' }">{{
+												item.time
+											}}</span>
+											<span>{{ item.content }}</span>
+										</li>
+									</ul>
+								</el-scrollbar>
+								<el-pagination
+									:pager-count="5"
+									style="text-align: right;margin-top: 12px;"
+									background
+									@size-change="stockSizeChange"
+									@current-change="stockCurrentChange"
+									:current-page="stockForm.pageNum"
+									:page-sizes="[20, 30, 50, 80]"
+									layout="sizes, prev, pager, next"
+									:total="stockTotal"
+								>
+								</el-pagination>
+							</div>
+						</div>
+						<div v-if="'income' === item" class="content">
+							<div class="chart">
+								<div class="switch title clearfix">
+									趋势信息
+									<span
+										:class="income === 'property' ? 'actived' : ''"
+										@click="incomeSwitch('property')"
+										>房价收入比</span
+									>
+									<span :class="income === 'cost' ? 'actived' : ''" @click="incomeSwitch('cost')"
+										>生活成本</span
+									>
+									<span :class="income === 'rent' ? 'actived' : ''" @click="incomeSwitch('rent')"
+										>租金指数</span
+									>
+								</div>
+								<ve-line
+									height="100%"
+									:judge-width="true"
+									:colors="colors"
+									:resizeable="true"
+									:legend="legend"
+									:tooltip="lineTooltip"
+									:grid="grid"
+									:yAxis="yAxis"
+									:xAxis="xAxisMonth"
+									:data="incomeData"
+								></ve-line>
+							</div>
+							<el-divider direction="vertical"></el-divider>
+							<div class="info">
+								<div class="info-title">信息统计</div>
+								<el-scrollbar :native="false" :noresize="false">
+									<ul>
+										<li
+											v-for="(item, index) in incomeEssay"
+											:key="item.uuid"
+											@click="showEssay(item, '指数')"
+										>
+											<el-tooltip
+												v-if="String(item.time) >= 11"
+												class="title"
+												effect="dark"
+												:content="item.time"
+												placement="left"
+											>
+												<span class="title" :style="{ 'background-color': '#2F4554' }">{{
+													item.time
+												}}</span>
+											</el-tooltip>
+											<span v-else class="title" :style="{ 'background-color': '#2F4554' }">{{
+												item.time
+											}}</span>
+											<span>{{ item.content }}</span>
+										</li>
+									</ul>
+								</el-scrollbar>
+								<el-pagination
+									:pager-count="5"
+									style="text-align: right;margin-top: 12px;"
+									background
+									@size-change="incomeSizeChange"
+									@current-change="incomeCurrentChange"
+									:current-page="incomeForm.pageNum"
+									:page-sizes="[20, 30, 50, 80]"
+									layout="sizes, prev, pager, next"
+									:total="incomeTotal"
+								>
+								</el-pagination>
+							</div>
+						</div>
+					</el-carousel-item>
+				</el-carousel>
+			</el-scrollbar>
+		</div>
+
+		<!--        文章显示-->
+		<el-dialog class="read-dialog" :title="readTitle" :visible.sync="dialogVisible" width="800px">
+			<div class="read-content">
+				<span class="read-text">{{ dialogText }}</span>
+			</div>
+		</el-dialog>
+		<!--金额部分-->
+	</div>
+</template>
+
+<script>
+	import { getCountryList } from "api/common.js";
+	import { colors, bgColor } from "config/base.js";
+	import mixin from "components/mixins";
+	import { sliceShow } from "utils/common.js";
+	import {
+		getMessageNum,
+		getEssay,
+		getCountryTrading,
+		getTrading,
+		getGDP,
+		getInflation,
+		getStock,
+		getPriceToIncome,
+	} from "api/economic.js";
+
+	export default {
+		name: "Economic",
+		mixins: [mixin],
+		data() {
+			this.match = {
+				0: colors[0],
+				1: colors[1],
+				2: colors[2],
+			};
+			return {
+				trendMatch: {
+					0: '上升',
+					1: '稳定',
+					2: '下降',
+				},
+				countryList: [],
+				searchForm: {
+					country: "",
+				},
+				//滚动图默认激活经济趋势
+				activItem: "trend",
+				matchList: {
+					income: "生活指数",
+					gdp: "生产总值",
+					inflation: "通货膨胀",
+					stock: "股票指数",
+					trends: "经济趋势",
+				},
+				//滚动项
+				items: ["trend", "GDP", "amount", "inflation", "stock", "income"],
+				graphic: [
+					{
+						type: "text",
+						left: "center",
+						top: "center",
+						style: {
+							text: "信息总数：0",
+							fill: "#303133",
+							width: 30,
+							height: 30,
+							fontSize: 16,
+						},
+					},
+				],
+				//文章弹窗
+				readTitle: "",
+				dialogVisible: false,
+				dialogText: "",
+				//总条数部分(大环形图)
+				chartData: {
+					columns: [],
+					rows: [],
+				},
+				//趋势三个环形图部分
+				trendProgress: {
+					stable: 0,
+					decline: 0,
+					increase: 0,
+				},
+				//经济趋势文章
+				economicEssay: [],
+				trendTotal: 0,
+				trendForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				//贸易金额
+				amount: "import",
+				exportNum: [],
+				importNum: [],
+				difference: [],
+				lineData: {
+					columns: [],
+					rows: [],
+				},
+				//出口总额
+				exportData: [],
+				//进口总额
+				importData: [],
+				GDPdata: {
+					columns: [],
+					rows: [],
+				},
+				GDPEssay: [],
+				GDPTotal: 0,
+				GDPForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				//通货膨胀
+				inflationData: {
+					columns: [],
+					rows: [],
+				},
+				inflationEssay: [],
+				inflationTotal: 0,
+				inflationForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				stockData: {
+					columns: [],
+					rows: [],
+				},
+				stockTotal: 0,
+				stockEssay: [],
+				stockForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				//生活
+				income: "rent",
+				//租金指数
+				rent: [],
+				//生活成本指数
+				cost: [],
+				//房价收入比
+				property: [],
+				incomeData: {
+					columns: [],
+					rows: [],
+				},
+				incomeEssay: [],
+				incomeTotal: 0,
+				incomeForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				economicName:'经济'
+			};
+		},
+		mounted() {
+			getCountryList().then((res) => {
+				this.countryList = res.data;
+				this.searchForm.country = "中国";
+				//经济趋势
+				this.getMessage();
+				this.getEconomicEssay(this.trendForm);
+				this.getTrading();
+				//GDP
+				this.getGDPData();
+				this.getGDPEssay(this.GDPForm);
+				//通货膨胀
+				this.getInflationData();
+				this.getInflationEssay(this.inflationForm);
+				//股票指数
+				this.getStockEssay(this.stockForm);
+				this.getStockData();
+				//生活
+				this.getIncomeData();
+				this.getIncomeEssay(this.incomeForm);
+			});
+		},
+		computed: {
+			colorMatch(){
+				return this.match
+			}
+		},
+		methods: {
+			//切换
+			switchItem(val) {
+				this.activItem = val;
+				this.$refs["carousel"].setActiveItem(val);
+			},
+			//环形图数据格式化
+			progressFormat1(val) {
+				return "增加:" + val + "%";
+			},
+			progressFormat2(val) {
+				return "稳定:" + val + "%";
+			},
+			progressFormat3(val) {
+				return "下降:" + val + "%";
+			},
+			//排行进度条
+			progressFormat4(val) {
+				return val + "分";
+			},
+			search() {
+				//经济趋势
+				this.getMessage();
+				this.getEconomicEssay(this.trendForm);
+				this.getTrading();
+				//GDP
+				this.getGDPData();
+				this.getGDPEssay(this.GDPForm);
+				//通货膨胀
+				this.getInflationData();
+				this.getInflationEssay(this.inflationForm);
+				//股票指数
+				this.getStockEssay(this.stockForm);
+				this.getStockData();
+				//生活
+				this.getIncomeData();
+				this.getIncomeEssay(this.incomeForm);
+			},
+			//贸易切换
+			amountSwitch(val) {
+				this.amount = val;
+				switch (val) {
+					case "import":
+						this.lineData.rows = this.concatByAr(this.importNum);
+						break;
+					case "export":
+						this.lineData.rows = this.concatByAr(this.exportNum);
+						break;
+					case "plus":
+						this.lineData.rows = this.concatByAr(this.difference);
+						break;
+				}
+			},
+			//生活指数切换
+			incomeSwitch(val) {
+				this.income = val;
+				switch (val) {
+					case "rent":
+						this.incomeData.rows = this.concatByAr(this.rent);
+						break;
+					case "cost":
+						this.incomeData.rows = this.concatByAr(this.cost);
+						break;
+					case "property":
+						this.incomeData.rows = this.concatByAr(this.property);
+						break;
+				}
+			},
+			//展示文章
+			showEssay(content, name) {
+				this.dialogVisible = true;
+				this.readTitle = name + " - " + content.country;
+				this.dialogText = content.content;
+			},
+			//获取经济趋势文章信息
+			getEconomicEssay(data) {
+				getEssay(Object.assign(data, { country: this.searchForm.country, type: 0 }))
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.economicEssay = [{ country: "无", content: "暂无数据", time: "" }];
+							return;
+						}
+						let allData = res.data.list;
+						this.trendTotal = res.data.total;
+						this.economicEssay = allData;
+					})
+					.catch(() => {
+						this.economicEssay = [{ country: "无", content: "暂无数据", time: "" }];
+					});
+			},
+			trendSizeChange(val) {
+				this.trendForm.pageSize = val;
+				this.trendForm.pageNum = 1;
+				this.getEconomicEssay(this.trendForm);
+			},
+			trendCurrentChange(val) {
+				this.trendForm.pageNum = val;
+				this.getEconomicEssay(this.trendForm);
+			},
+			//获取经济趋势项环形图数据
+			getMessage() {
+				//初始化
+				this.graphic[0].style.text = `信息总数：0`;
+				this.chartData.columns = ["暂无数据"];
+				this.chartData.rows.push({
+					暂无数据: "暂无数据",
+				});
+				this.trendProgress = {
+					stable: 0,
+					decline: 0,
+					increase: 0,
+				};
+
+				//获取信息总数及信息趋势数据
+				getMessageNum(this.searchForm)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							return;
+						}
+						this.chartData.rows = [];
+						let allData = res.data;
+						this.graphic[0].style.text = `信息总数：${allData.sumCount}`;
+						this.chartData.columns = ["名称", "数量"];
+						allData.items.forEach((cur) => {
+							if (cur.name === "trends") {
+								return;
+							}
+							this.chartData.rows.push({
+								名称: this.matchList[cur.name],
+								数量: cur.num ? cur.num : 0,
+							});
+						});
+						this.trendProgress = {
+							stable: Number(allData.stable.replace("%", "")),
+							decline: Number(allData.decline.replace("%", "")),
+							increase: Number(allData.increase.replace("%", "")),
+						};
+					})
+					.catch(() => {});
+			},
+			//十亿格式化
+			formatBillion(data) {
+				return data / 1000000000;
+			},
+			//获取贸易金额
+			getTrading() {
+				getCountryTrading({ country: "" })
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.lineData.columns = ["暂无数据", "数量"];
+							this.lineData.rows = [
+								{
+									暂无数据: "暂无数据",
+									数量: 0,
+								},
+							];
+							this.exportNum = [
+								{
+									暂无数据: "暂无数据",
+									数量: 0,
+								},
+							];
+							this.importNum = [
+								{
+									暂无数据: "暂无数据",
+									数量: 0,
+								},
+							];
+							this.difference = [
+								{
+									暂无数据: "暂无数据",
+									数量: 0,
+								},
+							];
+							this.exportData = [
+								{
+									name: "暂无数据",
+									value: 0,
+								},
+							];
+							this.importData = [
+								{
+									name: "暂无数据",
+									value: 0,
+								},
+							];
+							return;
+						}
+						let allData = sliceShow(res.data);
+						this.lineData.columns = ["日期", ...Object.keys(allData)];
+						let dateArr = [];
+						//获取到所有的日期
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (!dateArr.includes(cur.time)) {
+									dateArr.push(cur.time);
+								}
+							});
+						}
+						//默认获取最近日期的top数据
+						this.getExport(dateArr[dateArr.length - 1]);
+						this.getImport(dateArr[dateArr.length - 1]);
+						this.exportNum = [];
+						this.importNum = [];
+						this.difference = [];
+						//获取进出口数据
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (dateArr.includes(cur.time)) {
+									this.exportNum.push({
+										日期: cur.time,
+										[cur.country]: cur.exportNum ? this.formatBillion(cur.exportNum) : 0,
+									});
+									this.importNum.push({
+										日期: cur.time,
+										[cur.country]: cur.importNum ? this.formatBillion(cur.importNum) : 0,
+									});
+									this.difference.push({
+										日期: cur.time,
+										[cur.country]: cur.difference ? this.formatBillion(cur.difference) : 0,
+									});
+								}
+							});
+						}
+						this.lineData.rows = this.concatByAr(this.importNum);
+					})
+					.catch(() => {
+						this.lineData.columns = ["暂无数据", "金额"];
+						this.lineData.rows = [
+							{
+								暂无数据: "暂无数据",
+								金额: 0,
+							},
+						];
+						this.exportNum = [
+							{
+								暂无数据: "暂无数据",
+								金额: 0,
+							},
+						];
+						this.importNum = [
+							{
+								暂无数据: "暂无数据",
+								金额: 0,
+							},
+						];
+						this.difference = [
+							{
+								暂无数据: "暂无数据",
+								金额: 0,
+							},
+						];
+						this.exportData = [
+							{
+								name: "暂无数据",
+								value: 0,
+							},
+						];
+						this.importData = [
+							{
+								name: "暂无数据",
+								value: 0,
+							},
+						];
+					});
+			},
+			//数组对象按照某个参数合并
+			concatByAr(arr) {
+				var temp = [];
+				arr.forEach((item) => {
+					var skey = item["日期"];
+					if (typeof temp[skey] == "undefined") {
+						temp[skey] = item;
+					} else {
+						for (var k in item) {
+							temp[skey][k] = item[k];
+						}
+					}
+				});
+				var result = [];
+				for (var i in temp) {
+					result.push(temp[i]);
+				}
+				return result;
+			},
+			chartClickEvents(e) {
+				this.getExport(e.data[0]);
+				this.getImport(e.data[0]);
+			},
+			//出口总额top10
+			getExport(time) {
+				let obj = {};
+				obj.type = 0;
+				obj.time = this.$moment(time).format("YYYY-MM-DD HH:mm:hh");
+				getTrading(obj)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.exportData = [
+								{
+									name: "暂无数据",
+									value: 0,
+								},
+							];
+							return;
+						}
+						let allData = res.data;
+						let first = allData.items[0].importNum;
+						console.log(typeof first,'3445');
+						this.exportData = allData.items.splice(0, 10).map((cur) => {
+							return {
+								name: cur.country,
+								value: Number(((cur.importNum / first) * 100).toFixed(2)),
+							};
+						});
+					})
+					.catch(() => {
+						this.exportData = [
+							{
+								name: "暂无数据",
+								value: 0,
+							},
+						];
+					});
+			},
+			//进口总额top10
+			getImport(time) {
+				let obj = {};
+				obj.type = 1;
+				obj.time = this.$moment(time).format("YYYY-MM-DD HH:mm:ss");
+				getTrading(obj)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.importData = [
+								{
+									name: "暂无数据",
+									value: 300,
+								},
+							];
+							return;
+						}
+						let allData = res.data;
+						let first = allData.items[0].exportNum;
+						this.importData = allData.items.splice(0, 10).map((cur) => {
+							return {
+								name: cur.country,
+								value: Number(((cur.exportNum / first) * 100).toFixed(2)),
+							};
+						});
+					})
+					.catch(() => {
+						this.importData = [
+							{
+								name: "暂无数据",
+								value: 300,
+							},
+						];
+					});
+			},
+			//GDP
+			getGDPData() {
+				getGDP({
+					type: 0,
+					country: "",
+				})
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.GDPdata.columns = ["日期", "国家"];
+							this.GDPdata.rows = [
+								{
+									日期: "暂无数据",
+									国家: 0,
+								},
+							];
+							return;
+						}
+						let allData = sliceShow(res.data);
+						this.GDPdata.columns = ["日期", ...Object.keys(allData)];
+						let dateArr = [];
+						//获取到所有的日期
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (!dateArr.includes(cur.gdpDate)) {
+									dateArr.push(cur.gdpDate);
+								}
+							});
+						}
+						let gdpArr = [];
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (dateArr.includes(cur.gdpDate)) {
+									gdpArr.push({
+										日期: cur.gdpDate,
+										[cur.country]: cur.gdp ? cur.gdp : 0,
+									});
+								}
+							});
+						}
+						this.GDPdata.rows = this.concatByAr(gdpArr);
+					})
+					.catch(() => {
+						this.GDPdata.columns = ["日期", "国家"];
+						this.GDPdata.rows = [
+							{
+								日期: "暂无数据",
+								国家: 0,
+							},
+						];
+					});
+			},
+			getGDPEssay(data) {
+				getEssay(Object.assign(data, { country: this.searchForm.country, type: 1 }))
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.GDPEssay = [{ content: "暂无数据", time: "无" }];
+							return;
+						}
+						this.GDPTotal = res.data.total;
+						let allData = res.data.list.map((cur) => {
+							return {
+								content: cur.content,
+								country: cur.country,
+								fType: cur.ftype,
+								time: this.$moment(cur.time).format("YYYY-MM-DD"),
+								uuid: cur.uuid,
+								zType: cur.zType,
+							};
+						});
+						this.GDPEssay = allData;
+					})
+					.catch(() => {
+						this.GDPEssay = [{ content: "暂无数据", time: "无" }];
+					});
+			},
+			GDPSizeChange(val) {
+				this.GDPForm.pageSize = val;
+				this.GDPForm.pageNum = 1;
+				this.getGDPEssay(this.GDPForm);
+			},
+			GDPCurrentChange(val) {
+				this.GDPForm.pageNum = val;
+				this.getGDPEssay(this.GDPForm);
+			},
+			//通货膨胀
+			getInflationData() {
+				getInflation({ country: "" })
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.inflationData.columns = ["暂无数据", "数值"];
+							this.inflationData.rows = [
+								{
+									暂无数据: "暂无数据",
+									数值: 0,
+								},
+							];
+							return;
+						}
+						let allData = sliceShow(res.data);
+						this.inflationData.columns = ["日期", ...Object.keys(allData)];
+						let dateArr = [];
+						let dataKey = Object.keys(allData);
+						dataKey.forEach((cur) => {
+							allData[cur].forEach((o) => {
+								dateArr.push({
+									[o.country]: o.value ? o.value.replace("%", "") / 100 : 0,
+									日期: this.$moment(o.publicTime).format("YYYY-MM"),
+								});
+							});
+						});
+
+						this.inflationData.rows = this.concatBy(dateArr, "日期");
+					})
+					.catch(() => {
+						this.inflationData.columns = ["暂无数据", "数值"];
+						this.inflationData.rows = [
+							{
+								暂无数据: "暂无数据",
+								数值: 0,
+							},
+						];
+					});
+			},
+			concatBy(arr, name) {
+				var temp = [];
+				arr.forEach((item) => {
+					var skey = item[name];
+					if (typeof temp[skey] == "undefined") {
+						temp[skey] = item;
+					} else {
+						for (var k in item) {
+							temp[skey][k] = item[k];
+						}
+					}
+				});
+				var result = [];
+				for (var i in temp) {
+					result.push(temp[i]);
+				}
+				return result;
+			},
+			getInflationEssay(data) {
+				getEssay(Object.assign(data, { country: this.searchForm.country, type: 3 }))
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.inflationEssay = [{ country: "无", content: "暂无数据", time: "" }];
+							return;
+						}
+						this.inflationTotal = res.data.total;
+						let allData = res.data.list.map((cur) => {
+							return {
+								content: cur.content,
+								country: cur.country,
+								fType: cur.ftype,
+								time: this.$moment(cur.time).format("YYYY-MM-DD"),
+								uuid: cur.uuid,
+								zType: cur.zType,
+							};
+						});
+						this.inflationEssay = allData;
+					})
+					.catch(() => {
+						this.inflationEssay = [{ country: "无", content: "暂无数据", time: "" }];
+					});
+			},
+			inflationSizeChange(val) {
+				this.inflationForm.pageSize = val;
+				this.inflationForm.pageNum = 1;
+				this.getInflationEssay(this.inflationForm);
+			},
+			inflationCurrentChange(val) {
+				this.inflationForm.pageNum = val;
+				this.getInflationEssay(this.inflationForm);
+			},
+			//股票指数
+			getStockData() {
+				getStock({ country: this.searchForm.country })
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.stockData.columns = ["暂无数据", "数值"];
+							this.stockData.rows = [
+								{
+									暂无数据: "暂无数据",
+									数值: 0,
+								},
+							];
+							return;
+						}
+						let allData = sliceShow(res.data, 3);
+						let dateArr = [];
+						let titleArr = [];
+						//获取到所有的日期
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (!dateArr.includes(cur.market)) {
+									dateArr.push(cur.market);
+								}
+								if (!titleArr.includes(cur.country + "-" + cur.name)) {
+									titleArr.push(cur.country + "-" + cur.name);
+								}
+							});
+						}
+						this.stockData.columns = ["日期", ...titleArr];
+						let gdpArr = [];
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (dateArr.includes(cur.market)) {
+									gdpArr.push({
+										日期: this.$moment(cur.market).format("YYYY-MM-DD"),
+										[cur.country + "-" + cur.name]: cur.price ? cur.price : 0,
+									});
+								}
+							});
+						}
+						this.stockData.rows = this.concatByAr(gdpArr);
+					})
+					.catch(() => {
+						this.stockData.columns = ["暂无数据", "数值"];
+						this.stockData.rows = [
+							{
+								暂无数据: "暂无数据",
+								数值: 0,
+							},
+						];
+					});
+			},
+			getStockEssay(data) {
+				getEssay(Object.assign(data, { country: this.searchForm.country, type: 4 }))
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.stockEssay = [{ country: "无", content: "暂无数据", time: "" }];
+							return;
+						}
+						this.stockTotal = res.data.total;
+						let allData = res.data.list.map((cur) => {
+							return {
+								content: cur.content,
+								country: cur.country,
+								fType: cur.ftype,
+								time: this.$moment(cur.time).format("YYYY-MM-DD"),
+								uuid: cur.uuid,
+								zType: cur.zType,
+							};
+						});
+						this.stockEssay = allData;
+					})
+					.catch(() => {
+						this.stockEssay = [{ country: "无", content: "暂无数据", time: "" }];
+					});
+			},
+			stockSizeChange(val) {
+				this.stockForm.pageSize = val;
+				this.stockForm.pageNum = 1;
+				this.getStockEssay(this.stockForm);
+			},
+			stockCurrentChange(val) {
+				this.stockForm.pageNum = val;
+				this.getStockEssay(this.stockForm);
+			},
+			//生活
+			getIncomeData() {
+				getPriceToIncome({ country: "" })
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.incomeData.columns = ["暂无数据", "数值"];
+							this.incomeData.rows = [
+								{
+									暂无数据: "暂无数据",
+									数值: 0,
+								},
+							];
+							return;
+						}
+						let allData = sliceShow(res.data);
+						this.incomeData.columns = ["日期", ...Object.keys(allData)];
+						let dateArr = [];
+						//获取到所有的日期
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (!dateArr.includes(cur.time)) {
+									dateArr.push(cur.time);
+								}
+							});
+						}
+						this.rent = [];
+						this.cost = [];
+						this.property = [];
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (dateArr.includes(cur.time)) {
+									this.rent.push({
+										日期: cur.publicTime,
+										[cur.country]: cur.rentIndex ? cur.rentIndex : 0,
+									});
+									this.cost.push({
+										日期: cur.publicTime,
+										[cur.country]: cur.costIndexPlus ? cur.costIndexPlus : 0,
+									});
+									this.property.push({
+										日期: cur.publicTime,
+										[cur.country]: cur.propertyToIncomeIndex ? cur.propertyToIncomeIndex : 0,
+									});
+								}
+							});
+						}
+						this.incomeData.rows = this.concatByAr(this.rent);
+					})
+					.catch(() => {
+						this.incomeData.columns = ["暂无数据", "数值"];
+						this.incomeData.rows = [
+							{
+								暂无数据: "暂无数据",
+								数值: 0,
+							},
+						];
+					});
+			},
+			getIncomeEssay(data) {
+				getEssay(Object.assign(data, { country: this.searchForm.country, type: 2 }))
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.incomeEssay = [{ country: "无", content: "暂无数据", time: "" }];
+							return;
+						}
+						this.incomeTotal = res.data.total;
+						let allData = res.data.list.map((cur) => {
+							return {
+								content: cur.content,
+								country: cur.country,
+								fType: cur.ftype,
+								time: this.$moment(cur.time).format("YYYY-MM-DD"),
+								uuid: cur.uuid,
+								zType: cur.zType,
+							};
+						});
+						this.incomeEssay = allData;
+					})
+					.catch(() => {
+						this.incomeEssay = [{ country: "无", content: "暂无数据", time: "" }];
+					});
+			},
+			incomeSizeChange(val) {
+				this.incomeForm.pageSize = val;
+				this.incomeForm.pageNum = 1;
+				this.getIncomeEssay(this.incomeEssay);
+			},
+			incomeCurrentChange(val) {
+				this.incomeForm.pageNum = val;
+				this.getIncomeEssay(this.incomeEssay);
+			},
+		},
+	};
+</script>
+
+<style scoped lang="scss">
+	ul {
+		margin: 0;
+		padding: 0;
+	}
+
+	.carousel {
+		height: calc(100% - 12px);
+	}
+	/*最外层的滚动*/
+	.el-scrollbar {
+		height: calc(100% - 38px);
+
+		/deep/ .el-scrollbar__view {
+			height: calc(100% - 8px);
+		}
+	}
+
+	.trend-chart {
+		height: 80% !important;
+	}
+</style>

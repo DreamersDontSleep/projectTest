@@ -1,0 +1,545 @@
+<template>
+	<div>
+		<div class="search-header">
+			<el-form :inline="true" :model="searchForm" class="demo-form-inline">
+				<el-form-item label="国家：">
+					<el-select v-model="searchForm.country" placeholder="请选择国家">
+						<el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+					</el-select>
+				</el-form-item>
+				<el-form-item label="时间区间：">
+					<el-date-picker
+						v-model="searchForm.date"
+						type="monthrange"
+						format="yyyy-MM"
+						range-separator="至"
+						start-placeholder="开始日期"
+						end-placeholder="结束日期"
+						align="right"
+					>
+					</el-date-picker>
+				</el-form-item>
+				<el-form-item>
+					<el-button @click="search">查询</el-button>
+				</el-form-item>
+			</el-form>
+		</div>
+		<div class="main-content">
+			<div class="carousel-switch-items clearfix">
+				<span :class="activItem === 'traffic' ? 'actived' : ''" @click="switchItem('traffic')">交通指数</span>
+				<span :class="activItem === 'crime' ? 'actived' : ''" @click="switchItem('crime')">犯罪率</span>
+
+				<span :class="activItem === 'safety' ? 'actived' : ''" @click="switchItem('safety')">安全指数</span>
+			</div>
+			<!--滚动图-->
+			<el-carousel :autoplay="false" :interval="3000" class="carousel" ref="carousel" @change="carouselChange">
+				<el-carousel-item v-for="item in items" :key="item" :name="item">
+					<!-- <div class="leaderboard">
+						<span>国家综合国力排行榜：</span>
+						<el-tag
+							size="mini"
+							v-for="item in boardData"
+							:key="item.label"
+							:type="item.type"
+							effect="plain"
+						>
+							{{ item.label }}
+						</el-tag>
+					</div> -->
+					<div v-if="'safety' === item" class="content">
+						<div class="chart">
+							<ve-line
+								height="100%"
+								:judge-width="true"
+								:resizeable="true"
+								:colors="colors"
+								:extend="extend"
+								:legend="legend"
+								:tooltip="lineTooltip"
+								:grid="grid"
+								:yAxis="yAxis"
+								:xAxis="xAxisMonth"
+								:data="safetyIndex"
+							>
+							</ve-line>
+						</div>
+						<el-divider direction="vertical"></el-divider>
+						<div class="info">
+							<el-scrollbar :native="false" :noresize="false">
+								<ul>
+									<li
+										v-for="(item, index) in safetyEssays"
+										:key="item.uuid"
+										@click="showEssay(item, '安全指数')"
+									>
+										<el-tooltip
+											v-if="item.country.length >= 4"
+											class="title"
+											effect="dark"
+											:content="item.country"
+											placement="left"
+										>
+											<span class="title" :style="{ 'background-color': bgColor }">{{
+												item.country
+											}}</span>
+										</el-tooltip>
+										<span v-else class="title" :style="{ 'background-color': bgColor }">{{
+											item.country
+										}}</span>
+										<span>{{ item.time + "&nbsp" + item.content }}</span>
+									</li>
+								</ul>
+							</el-scrollbar>
+						</div>
+					</div>
+					<div v-if="'crime' === item" class="content">
+						<div class="chart">
+							<ve-line
+								height="100%"
+								:judge-width="true"
+								:resizeable="true"
+								:colors="colors"
+								:extend="extend"
+								:legend="legend"
+								:tooltip="lineTooltip"
+								:grid="grid"
+								:yAxis="yAxisRatio"
+								:xAxis="xAxisMonth"
+								:data="crimeIndex"
+							>
+							</ve-line>
+						</div>
+						<el-divider direction="vertical"></el-divider>
+						<div class="info">
+							<el-scrollbar :native="false" :noresize="false">
+								<ul>
+									<li
+										v-for="(item, index) in crimeEssays"
+										:key="item.uuid"
+										@click="showEssay(item.content, '犯罪率')"
+									>
+										<el-tooltip
+											v-if="item.country.length >= 4"
+											class="title"
+											effect="dark"
+											:content="item.country"
+											placement="left"
+										>
+											<span class="title" :style="{ 'background-color': bgColor }">{{
+												item.country
+											}}</span>
+										</el-tooltip>
+										<span v-else class="title" :style="{ 'background-color': bgColor }">{{
+											item.country
+										}}</span>
+										<span>{{ item.time + "&nbsp" + item.content }}</span>
+									</li>
+								</ul>
+							</el-scrollbar>
+						</div>
+					</div>
+					<div v-if="'traffic' === item" class="content">
+						<div class="chart">
+							<ve-line
+								height="100%"
+								:judge-width="true"
+								:resizeable="true"
+								:extend="extend"
+								:colors="colors"
+								:legend="legend"
+								:tooltip="lineTooltip"
+								:grid="grid"
+								:yAxis="yAxis"
+								:xAxis="xAxisMonth"
+								:data="trafficIndex"
+							>
+							</ve-line>
+						</div>
+						<el-divider direction="vertical"></el-divider>
+						<div class="info">
+							<el-scrollbar :native="false" :noresize="false">
+								<ul>
+									<li
+										v-for="(item, index) in trafficEssays"
+										:key="item.uuid"
+										@click="showEssay(item, '交通指数')"
+									>
+										<el-tooltip
+											v-if="item.country.length >= 4"
+											class="title"
+											effect="dark"
+											:content="item.country"
+											placement="left"
+										>
+											<span class="title" :style="{ 'background-color': bgColor }">{{
+												item.country
+											}}</span>
+										</el-tooltip>
+										<span v-else class="title" :style="{ 'background-color': bgColor }">{{
+											item.country
+										}}</span>
+										<span>{{ item.time + "&nbsp" + item.content }}</span>
+									</li>
+								</ul>
+							</el-scrollbar>
+						</div>
+					</div>
+				</el-carousel-item>
+			</el-carousel>
+		</div>
+		<!--        文章显示-->
+		<el-dialog class="read-dialog" :title="readTitle" :visible.sync="dialogVisible" width="60%">
+			<div class="read-content">
+				<span class="read-text">{{ dialogText }}</span>
+			</div>
+		</el-dialog>
+	</div>
+</template>
+
+<script>
+	import { colors } from "config/base.js";
+	import { sliceShow, concatBy } from "utils/common.js";
+	import mixin from "components/mixins";
+	import { getCountryList } from "api/common.js";
+	import { getTopCountries, getSelectLists, getTraffic, getSocialInfo } from "api/social.js";
+	import $ from "jquery";
+
+	export default {
+		name: "Safety",
+		mixins: [mixin],
+		data() {
+			this.extend = {
+				series: {
+					type: "line",
+					connectNulls: true,
+				},
+				yAxis: {
+					min: "dataMin",
+				},
+			};
+			return {
+				countryList: [],
+				searchForm: {
+					country: "",
+					date: "",
+				},
+				//滚动图默认激活经济安全
+				activItem: "safety",
+				//滚动项
+				items: ["safety", "crime", "traffic"],
+				//排行榜
+				boardData: [],
+				safetyIndex: {
+					columns: [],
+					rows: [],
+				},
+				crimeIndex: {
+					columns: [],
+					rows: [],
+				},
+				trafficIndex: {
+					columns: [],
+					rows: [],
+				},
+				readTitle: "",
+				safetyEssays: [],
+				crimeEssays: [],
+				trafficEssays: [],
+				//文章弹窗
+				dialogVisible: false,
+				dialogText: "",
+			};
+		},
+		created() {
+			getCountryList().then((res) => {
+				this.countryList = res.data;
+				this.searchForm.country = "美国";
+				this.getTopCountriesData(this.getSearchData());
+				this.getSocSecurityData(this.getSearchData());
+				this.getTrafficData(this.getSearchData());
+				this.getAllInfos();
+			});
+		},
+		methods: {
+			//切换
+			switchItem(val) {
+				this.activItem = val;
+				this.$refs["carousel"].setActiveItem(val);
+			},
+			//切换
+			carouselChange(index) {
+				this.activItem = this.items[index];
+			},
+			//数组对象按照某个参数合并
+			concatByAr(arr) {
+				var temp = [];
+				arr.forEach(function(item, index) {
+					var skey = item["日期"];
+					if (typeof temp[skey] == "undefined") {
+						temp[skey] = item;
+					} else {
+						for (var k in item) {
+							temp[skey][k] = item[k];
+						}
+					}
+				});
+				var result = [];
+				for (var i in temp) {
+					result.push(temp[i]);
+				}
+				return result;
+			},
+			//展示文章
+			showEssay(content, name) {
+				this.dialogVisible = true;
+				this.readTitle = name + " - " + content.country;
+				this.dialogText = content.content;
+			},
+			search() {
+				this.getTopCountriesData(this.getSearchData());
+				this.getSocSecurityData(this.getSearchData());
+				this.getTrafficData(this.getSearchData());
+				this.getAllInfos();
+			},
+			getSearchData() {
+				let startTime = this.searchForm.date[0];
+				let endTime = this.searchForm.date[1];
+				let searchData = {
+					country: this.searchForm.country,
+					startTime: startTime ? this.$moment(startTime).format("YYYY") : "",
+					endTime: endTime ? this.$moment(endTime).format("YYYY") : "",
+				};
+				return searchData;
+			},
+			getTopCountriesData(data) {
+				getTopCountries(Object.assign(data, { country: "" }))
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.boardData.push({
+								type: "success",
+								label: "暂无数据",
+							});
+						}
+						let allData = sliceShow(res.data);
+						this.boardData = [];
+						allData.forEach((cur) => {
+							this.boardData.push({
+								type: "success",
+								label: cur.ranking + "-" + cur.country_cn,
+							});
+						});
+					})
+					.catch(() => {
+						this.boardData.push({
+							type: "success",
+							label: "暂无数据",
+						});
+					});
+			},
+			//安全指数，犯罪率
+			getSocSecurityData(data) {
+				getSelectLists(data)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.crimeIndex.columns = ["暂无数据", "数量"];
+							this.safetyIndex.columns = ["暂无数据", "数量"];
+							this.crimeIndex.rows = [
+								{
+									暂无数据: "暂无数据",
+									数量: 10,
+								},
+							];
+							this.safetyIndex.rows = [
+								{
+									暂无数据: "暂无数据",
+									数量: 10,
+								},
+							];
+						}
+						let allData = sliceShow(res.data);
+						this.crimeIndex.columns = ["日期", ...Object.keys(allData)];
+						this.safetyIndex.columns = ["日期", ...Object.keys(allData)];
+						let dateArr = [];
+						//获取到所有的日期
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (!dateArr.includes(cur.publish_time)) {
+									dateArr.push(cur.publish_time);
+								}
+							});
+						}
+						let crimeIndex = [];
+						let safetyIndex = [];
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (dateArr.includes(cur.publish_time)) {
+									crimeIndex.push({
+										日期: cur.publish_time,
+										[cur.country]: cur.crime_index,
+									});
+									safetyIndex.push({
+										日期: cur.publish_time,
+										[cur.country]: cur.safety_index,
+									});
+								}
+							});
+						}
+						this.crimeIndex.rows = this.concatByAr(crimeIndex);
+						this.safetyIndex.rows = this.concatByAr(safetyIndex);
+					})
+					.catch(() => {
+						this.crimeIndex.columns = ["暂无数据", "数量"];
+						this.safetyIndex.columns = ["暂无数据", "数量"];
+						this.crimeIndex.rows = [
+							{
+								暂无数据: "暂无数据",
+								数量: 0,
+							},
+						];
+						this.safetyIndex.rows = [
+							{
+								暂无数据: "暂无数据",
+								数量: 0,
+							},
+						];
+					});
+			},
+			//交通指数
+			getTrafficData(data) {
+				getTraffic(data)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.trafficIndex.columns = ["暂无数据", "数量"];
+							this.trafficIndex.rows = [
+								{
+									暂无数据: "暂无数据",
+									数量: 0,
+								},
+							];
+						}
+						let allData = sliceShow(res.data);
+						this.trafficIndex.columns = ["日期", ...Object.keys(allData)];
+						let dateArr = [];
+						//获取到所有的日期
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (!dateArr.includes(cur.publish_time)) {
+									dateArr.push(cur.publish_time);
+								}
+							});
+						}
+						let trafficIndex = [];
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (dateArr.includes(cur.publish_time)) {
+									trafficIndex.push({
+										日期: cur.publish_time,
+										[cur.country]: cur.traffic_commute_time_index,
+									});
+								}
+							});
+						}
+						this.trafficIndex.rows = this.concatByAr(trafficIndex);
+					})
+					.catch(() => {
+						this.trafficIndex.columns = ["暂无数据", "数量"];
+						this.trafficIndex.rows = [
+							{
+								暂无数据: "暂无数据",
+								数量: 0,
+							},
+						];
+					});
+			},
+			getAllInfos() {
+				getSocialInfo({ country: this.searchForm.country, parentType: "社会治安" })
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.safetyEssays = [
+								{
+									title: "无数据",
+									country: "暂无数据",
+								},
+							];
+							this.crimeEssays = [
+								{
+									title: "无数据",
+									country: "暂无数据",
+								},
+							];
+							this.trafficEssays = [
+								{
+									title: "无数据",
+									country: "暂无数据",
+								},
+							];
+							return;
+						}
+						console.log(2);
+						//取出所有的类别
+						this.safetyEssays = [];
+						this.crimeEssays = [];
+						this.trafficEssays = [];
+						//取出所有的信息
+						let info = Object.values(res.data);
+						console.log(info);
+						for (let key of info) {
+							key.forEach((cur) => {
+								if (cur.childType === 15) {
+									this.safetyEssays.push(cur);
+								} else if (cur.childType === 16) {
+									this.crimeEssays.push(cur);
+								} else {
+									this.trafficEssays.push(cur);
+								}
+							});
+						}
+					})
+					.catch(() => {
+						this.safetyEssays = [
+							{
+								title: "无数据",
+								country: "暂无数据",
+							},
+						];
+						this.crimeEssays = [
+							{
+								title: "无数据",
+								country: "暂无数据",
+							},
+						];
+						this.trafficEssays = [
+							{
+								title: "无数据",
+								country: "暂无数据",
+							},
+						];
+					});
+			},
+		},
+	};
+</script>
+
+<style scoped lang="scss">
+	ul {
+		margin: 0;
+		padding: 0;
+	}
+
+	.main-content .carousel {
+		height: calc(100% - 60px);
+	}
+
+	.el-tag--plain {
+		margin: 4px;
+	}
+
+	.leaderboard {
+		font-size: 16px;
+		color: #f8690d;
+	}
+</style>

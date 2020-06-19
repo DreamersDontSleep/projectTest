@@ -1,0 +1,775 @@
+<template>
+	<div>
+		<div class="search-header">
+			<el-form :inline="true" :model="searchForm" class="demo-form-inline">
+				<el-form-item label="国家：">
+					<el-select v-model="searchForm.country" placeholder="请选择国家">
+						<el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+					</el-select>
+				</el-form-item>
+				<el-form-item>
+					<el-button @click="search">查询</el-button>
+				</el-form-item>
+			</el-form>
+		</div>
+		<div class="main-content">
+			<div class="carousel-switch-items clearfix">
+				<span :class="activItem === 'task' ? 'actived' : ''" @click="switchItem('task')">外交人物</span>
+				<span :class="activItem === 'report' ? 'actived' : ''" @click="switchItem('report')">驻外报导</span>
+				<span :class="activItem === 'event' ? 'actived' : ''" @click="switchItem('event')">外交事件</span>
+				<span :class="activItem === 'policy' ? 'actived' : ''" @click="switchItem('policy')">外交政策</span>
+			</div>
+			<!--滚动图-->
+			<el-carousel :autoplay="false" indicator-position="none" :interval="3000" class="carousel" ref="carousel">
+				<el-carousel-item v-for="item in items" :key="item" :name="item">
+					<!-- ["policy", "event", "report", " task"], -->
+					<div v-if="'policy' === item" class="content">
+						<div class="chart">
+							<ve-histogram
+								height="100%"
+								:judge-width="true"
+								:resizeable="true"
+								:colors="colors"
+								:settings="trendChartSettings"
+								:data="policyData"
+							></ve-histogram>
+						</div>
+						<el-divider direction="vertical"></el-divider>
+						<div class="info">
+							<el-scrollbar :native="false" :noresize="false">
+								<ul>
+									<li
+										v-for="(item, index) in policyEssay"
+										:key="item.uuid"
+										@click="showEssay(item, '外交政策')"
+									>
+										<el-tooltip
+											v-if="item.time.length >= 11"
+											class="title"
+											effect="dark"
+											:content="item.time"
+											placement="left"
+										>
+											<span class="title" :style="{ 'background-color': 'rgb(97, 160, 168)' }">{{
+												item.time
+											}}</span>
+										</el-tooltip>
+										<span
+											v-else
+											class="title"
+											:style="{ 'background-color': 'rgb(97, 160, 168)' }"
+											>{{ item.time }}</span
+										>
+										<span>{{ item.content }}</span>
+									</li>
+								</ul>
+							</el-scrollbar>
+							<el-pagination
+								:pager-count="5"
+								style="text-align: right;margin-top: 12px;"
+								background
+								@size-change="policySizeChange"
+								@current-change="policyCurrentChange"
+								:current-page="policyForm.pageNum"
+								:page-sizes="[20, 30, 50, 80]"
+								layout="sizes, prev, pager, next"
+								:total="policyTotal"
+							>
+							</el-pagination>
+						</div>
+					</div>
+					<div v-if="'event' === item" class="content">
+						<div class="chart">
+							<el-timeline>
+								<el-scrollbar :native="false" :noresize="false" ref="scroll">
+									<el-timeline-item
+										v-for="item in eventItems"
+										:color="item.color"
+										:key="item.uuid"
+										:timestamp="item.time"
+										placement="top"
+									>
+										<el-card>
+											<h4>{{ item.name }}</h4>
+											<p class="ellipsis war-content" @click="showEssay(item)">
+												{{ item.content }}
+											</p>
+										</el-card>
+									</el-timeline-item>
+								</el-scrollbar>
+							</el-timeline>
+							<el-pagination
+								:pager-count="5"
+								style="text-align: right;margin-top: 12px;"
+								background
+								@size-change="eventTimeSizeChange"
+								@current-change="eventTimeCurrentChange"
+								:current-page="eventTimeForm.pageNum"
+								:page-sizes="[20, 30, 50, 80]"
+								layout="sizes, prev, pager, next"
+								:total="eventTimeTotal"
+							>
+							</el-pagination>
+						</div>
+						<el-divider direction="vertical"></el-divider>
+						<div class="info">
+							<el-scrollbar :native="false" :noresize="false">
+								<ul>
+									<li
+										v-for="(item, index) in eventEssay"
+										:key="item.uuid"
+										@click="showEssay(item, '外交事件')"
+									>
+										<el-tooltip
+											v-if="item.time.length >= 11"
+											class="title"
+											effect="dark"
+											:content="item.time"
+											placement="left"
+										>
+											<span class="title" :style="{ 'background-color': 'rgb(97, 160, 168)' }">{{
+												item.time
+											}}</span>
+										</el-tooltip>
+										<span
+											v-else
+											class="title"
+											:style="{ 'background-color': 'rgb(97, 160, 168)' }"
+											>{{ item.time }}</span
+										>
+										<span>{{ item.content }}</span>
+									</li>
+								</ul>
+							</el-scrollbar>
+							<el-pagination
+								:pager-count="5"
+								style="text-align: right;margin-top: 12px;"
+								background
+								@size-change="eventSizeChange"
+								@current-change="eventCurrentChange"
+								:current-page="eventForm.pageNum"
+								:page-sizes="[20, 30, 50, 80]"
+								layout="sizes, prev, pager, next"
+								:total="eventTotal"
+							>
+							</el-pagination>
+						</div>
+					</div>
+					<div v-if="'report' === item" class="content">
+						<div class="chart">
+							<ve-histogram
+								height="100%"
+								:judge-width="true"
+								:resizeable="true"
+								:colors="colors"
+								:settings="trendChartSettings"
+								:data="reportData"
+							></ve-histogram>
+						</div>
+						<el-divider direction="vertical"></el-divider>
+						<div class="info">
+							<el-scrollbar :native="false" :noresize="false">
+								<ul>
+									<li
+										v-for="(item, index) in reportEssay"
+										:key="item.uuid"
+										@click="showEssay(item, '驻外报道')"
+									>
+										<el-tooltip
+											v-if="item.time.length >= 11"
+											class="title"
+											effect="dark"
+											:content="item.time"
+											placement="left"
+										>
+											<span class="title" :style="{ 'background-color': 'rgb(97, 160, 168)' }">{{
+												item.time
+											}}</span>
+										</el-tooltip>
+										<span
+											v-else
+											class="title"
+											:style="{ 'background-color': 'rgb(97, 160, 168)' }"
+											>{{ item.time }}</span
+										>
+										<span>{{ item.content }}</span>
+									</li>
+								</ul>
+							</el-scrollbar>
+							<el-pagination
+								:pager-count="5"
+								style="text-align: right;margin-top: 12px;"
+								background
+								@size-change="reportSizeChange"
+								@current-change="reportCurrentChange"
+								:current-page="reportForm.pageNum"
+								:page-sizes="[20, 30, 50, 80]"
+								layout="sizes, prev, pager, next"
+								:total="reportTotal"
+							>
+							</el-pagination>
+						</div>
+					</div>
+					<div v-if="'task' === item" class="content">
+						<div id="taskChart" ref="taskChart"></div>
+					</div>
+				</el-carousel-item>
+			</el-carousel>
+		</div>
+		<!--        文章显示-->
+		<el-dialog class="read-dialog" :title="readTitle" :visible.sync="dialogVisible" width="60%">
+			<div class="read-content">
+				<span class="read-text">{{ dialogText }}</span>
+			</div>
+		</el-dialog>
+	</div>
+</template>
+
+<script>
+	import { colors } from "config/base.js";
+	import { sliceShow, concatBy } from "utils/common.js";
+	import mixin from "components/mixins";
+	import { getCountryList } from "api/common.js";
+	import {
+		getDiplomaticEvent,
+		getDiplomaticCountry,
+		getDiplomaticPerson,
+		getDipTemporaryInfo,
+		getPolicyStatistics,
+		getReportStatistics,
+	} from "api/diplomatic.js";
+
+	export default {
+		name: "Analysis",
+		mixins: [mixin],
+		data() {
+			return {
+				countryInfo: false,
+				readTitle: "",
+				countryList: [],
+				searchForm: {
+					country: "",
+				},
+				autoPlay: false,
+				//滚动图默认激活经济趋势
+				activItem: "policy",
+				//滚动项
+				items: ["policy", "event", "report", "task"],
+				//文章弹窗
+				dialogVisible: false,
+				dialogText: "",
+				policyForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				policyData: {
+					columns: ["日期", "数量"],
+					rows: [],
+				},
+				policyContent: {
+					content: {
+						value: {},
+					},
+				},
+				currentPage: 1,
+				total: 0,
+				policyTotal: 0,
+				eventTotal: 0,
+				reportTotal: 0,
+				eventForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				eventTimeForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				eventTimeTotal: 0,
+				eventItems: [],
+				allWar: [],
+				policyEssay: [],
+				eventEssay: [],
+				reportForm: {
+					pageNum: 1,
+					pageSize: 20,
+				},
+				reportData: {
+					columns: ["日期", "数量"],
+					rows: [],
+				},
+				reportEssay: [],
+				taskChart: "",
+			};
+		},
+		created() {
+			getCountryList().then((res) => {
+				this.countryList = res.data;
+				this.searchForm.country = "中国";
+				this.getPolicyData();
+				this.getReportData();
+				this.getTaskData();
+				this.policyForm.country = this.searchForm.country;
+				this.reportForm.country = this.searchForm.country;
+				this.eventForm.country = this.searchForm.country;
+				this.eventTimeForm.country = this.searchForm.country;
+				this.getPolicyInfoData(this.policyForm);
+				this.getReportInfoData(this.reportForm);
+				this.getEventInfoData(this.eventForm);
+				this.getEventData(this.eventTimeForm);
+			});
+		},
+		mounted() {
+			this.$nextTick(function() {
+				window.addEventListener("resize", this.chartResize, false);
+			});
+		},
+		destroyed() {
+			window.removeEventListener("resize", this.chartResize, false);
+		},
+		methods: {
+			chartResize() {
+				this.taskChart.resize();
+			},
+			//展示文章
+			showEssay(item) {
+				this.dialogVisible = true;
+				this.readTitle = item.title + " - " + item.time;
+				this.dialogText = item.content;
+			},
+			//切换
+			switchItem(val) {
+				this.activItem = val;
+				this.$refs["carousel"].setActiveItem(val);
+			},
+			//检索
+			search() {
+				this.policyForm.country = this.searchForm.country;
+				this.reportForm.country = this.searchForm.country;
+				this.eventForm.country = this.searchForm.country;
+				this.eventTimeForm.country = this.searchForm.country;
+				this.getPolicyData();
+				this.getTaskData();
+				this.getReportData();
+				this.getPolicyInfoData(this.policyForm);
+				this.getReportInfoData(this.reportForm);
+				this.getEventInfoData(this.eventForm);
+				this.getEventData(this.eventTimeForm);
+			},
+			setTaskChart(nodes, links) {
+				this.taskChart = this.$echarts.init(document.getElementById("taskChart"));
+				nodes.forEach(function(node) {
+					// node.itemStyle = null;
+					// node.value = node.symbolSize;
+					node.label = {
+						show: node.symbolSize > 40,
+					};
+				});
+				let option = {
+					animationDuration: 1500,
+					animationEasingUpdate: "quinticInOut",
+					tooltip: {
+						extraCssText: "width:240px; white-space:pre-wrap",
+						position: function(p) {
+							//其中p为当前鼠标的位置
+							return [p[0] + 10, p[1] - 10];
+						},
+					},
+					series: [
+						{
+							type: "graph",
+							layout: "force",
+							data: nodes,
+							links: links,
+							roam: true,
+							focusNodeAdjacency: true,
+							symbolSize: 20,
+							draggable: true,
+							force: {
+								repulsion: 120,
+								gravity: 0.08,
+								edgeLength: 100,
+							},
+							itemStyle: {
+								borderColor: "#fff",
+								borderWidth: 1,
+								shadowBlur: 10,
+								shadowColor: "rgba(0, 0, 0, 0.3)",
+							},
+							label: {
+								position: "right",
+								formatter: function(a) {
+									return a.name;
+								},
+							},
+							lineStyle: {
+								color: "source",
+								curveness: 0.3,
+							},
+							emphasis: {
+								lineStyle: {
+									width: 10,
+								},
+							},
+						},
+					],
+				};
+				this.taskChart.setOption(option);
+			},
+			getTaskData(data) {
+				getDiplomaticPerson()
+					.then((res) => {
+						//id: "0"
+						// name: "Myriel"
+						// value: 28.685715
+						let nodes = [];
+						//id: "0"
+						// name: null
+						// source: "1"
+						// target: "0"
+						let links = [];
+						let data = res.data;
+						for (let key in data) {
+							data[key].forEach((cur, index) => {
+								nodes.push({
+									id: cur.uuid,
+									name: cur.event,
+									value: cur.time,
+									symbolSize: 40,
+									itemStyle: {
+										color: "rgb(97,159,167)",
+									},
+								});
+								nodes.push({
+									id: key,
+									name: key,
+									symbolSize: 80,
+									itemStyle: {
+										color: this.colors[index],
+									},
+								});
+								links.push({
+									source: key,
+									target: cur.uuid,
+								});
+							});
+						}
+						this.$nextTick(function() {
+							this.setTaskChart(concatBy(nodes, "id"), links);
+						});
+					})
+					.catch(() => {});
+			},
+			getPolicyData() {
+				getPolicyStatistics(this.searchForm)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.policyData.rows = [
+								{
+									日期: "暂无数据",
+									数量: 0,
+								},
+							];
+							return;
+						}
+						this.policyData.rows = [];
+						let allData = res.data;
+						allData.forEach((cur) => {
+							this.policyData.rows.push({
+								日期: cur.time,
+								数量: cur.count,
+							});
+						});
+					})
+					.catch(() => {
+						this.policyData.rows = [
+							{
+								日期: "暂无数据",
+								数量: 0,
+							},
+						];
+					});
+				// getDiplomaticCountry()
+				// 	.then((res) => {
+				// 		if (this.$check.isNullData(res)) {
+				// 			this.policyContent = {};
+				// 			return;
+				// 		}
+				// 		this.policyContent = res.data[0];
+				// 	})
+				// 	.catch(() => {
+				// 		this.policyContent = {};
+				// 	});
+			},
+			getReportData() {
+				getReportStatistics(this.searchForm)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.reportData.rows = [
+								{
+									日期: "暂无数据",
+									数量: 0,
+								},
+							];
+							return;
+						}
+						this.reportData.rows = [];
+						let allData = res.data;
+						allData.forEach((cur) => {
+							this.reportData.rows.push({
+								日期: cur.time,
+								数量: cur.number,
+							});
+						});
+					})
+					.catch(() => {
+						this.reportData.rows = [
+							{
+								日期: "暂无数据",
+								数量: 0,
+							},
+						];
+					});
+			},
+			// 外交政策
+			getPolicyInfoData(data) {
+				let str = JSON.stringify(data); //序列化对象
+				let newobj = JSON.parse(str); //还原
+				newobj.parentType = "外交政策";
+				getDipTemporaryInfo(newobj)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.policyEssay = [
+								{
+									title: "暂无",
+									content: "暂无数据",
+									time: "无",
+								},
+							];
+							return;
+						}
+						this.policyTotal = res.data.total;
+						this.policyEssay = res.data.list.map((cur) => {
+							return {
+								title: cur.country,
+								content: cur.content,
+								time: cur.time,
+							};
+						});
+					})
+					.catch(() => {
+						this.policyEssay = [
+							{
+								title: "暂无",
+								content: "暂无数据",
+								time: "无",
+							},
+						];
+					});
+			},
+			policySizeChange(val) {
+				this.policyForm.pageSize = val;
+				this.policyForm.pageNum = 1;
+				this.getPolicyInfoData(this.policyForm);
+			},
+			policyCurrentChange(val) {
+				this.policyForm.pageNum = val;
+				this.getPolicyInfoData(this.policyForm);
+			},
+			//驻外报道
+			getReportInfoData(data) {
+				let str = JSON.stringify(data); //序列化对象
+				let newobj = JSON.parse(str); //还原
+				newobj.parentType = "驻外报导";
+				getDipTemporaryInfo(newobj)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.reportEssay = [
+								{
+									title: "暂无",
+									content: "暂无数据",
+									time: "无",
+								},
+							];
+							return;
+						}
+						this.reportTotal = res.data.total;
+						this.reportEssay = res.data.list.map((cur) => {
+							return {
+								title: cur.country,
+								content: cur.content,
+								time: cur.time,
+							};
+						});
+					})
+					.catch(() => {
+						this.reportEssay = [
+							{
+								title: "暂无",
+								content: "暂无数据",
+								time: "无",
+							},
+						];
+					});
+			},
+			reportSizeChange(val) {
+				this.reportForm.pageSize = val;
+				this.reportForm.pageNum = 1;
+				this.getReportInfoData(this.reportForm);
+			},
+			reportCurrentChange(val) {
+				this.reportForm.pageNum = val;
+				this.getReportInfoData(this.reportForm);
+			},
+			//外交事件
+			getEventData(data) {
+				getDiplomaticEvent(data)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.eventItems = [
+								{
+									uuid: "无",
+									time: "无",
+									title: "无",
+									name: "无",
+									content: "无",
+								},
+							];
+							return;
+						}
+						let data = res.data.list.map((cur) => {
+							return {
+								uuid: cur.uuid,
+								time: cur.time,
+								title: cur.person,
+								content: cur.event,
+								name: cur.person,
+							};
+						});
+						this.eventTimeTotal = res.data.total;
+						this.eventItems = data;
+					})
+					.catch(() => {
+						this.eventItems = [
+							{
+								uuid: "无",
+								time: "无",
+								title: "无",
+								name: "无",
+								content: "无",
+							},
+						];
+					});
+			},
+			eventTimeSizeChange(val) {
+				this.eventTimeForm.pageSize = val;
+				this.eventTimeForm.pageNum = 1;
+				this.getEventData(this.eventTimeForm);
+			},
+			eventTimeCurrentChange(val) {
+				this.eventTimeForm.pageNum = val;
+				this.getEventData(this.eventTimeForm);
+			},
+			getEventInfoData(data) {
+				let str = JSON.stringify(data); //序列化对象
+				let newobj = JSON.parse(str); //还原
+				newobj.parentType = "外交事件";
+				getDipTemporaryInfo(newobj)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.eventEssay = [
+								{
+									title: "暂无",
+									content: "暂无数据",
+									time: "无",
+								},
+							];
+							return;
+						}
+						this.eventTotal = res.data.total;
+						this.eventEssay = res.data.list.map((cur) => {
+							return {
+								title: cur.country,
+								content: cur.content,
+								time: cur.time,
+							};
+						});
+					})
+					.catch(() => {
+						this.eventEssay = [
+							{
+								title: "暂无",
+								content: "暂无数据",
+								time: "无",
+							},
+						];
+					});
+			},
+			eventSizeChange(val) {
+				this.eventForm.pageSize = val;
+				this.eventForm.pageNum = 1;
+				this.getEventInfoData(this.eventForm);
+			},
+			eventCurrentChange(val) {
+				this.eventForm.pageNum = val;
+				this.getEventInfoData(this.eventForm);
+			},
+		},
+	};
+</script>
+
+<style scoped lang="scss">
+	ul {
+		margin: 0;
+		padding: 0;
+	}
+	.carousel {
+		height: calc(100% - 60px);
+		.info .title {
+			display: inline-block;
+			width: 92px;
+			& ~ span {
+				color: #303133;
+				font-size: 14px;
+				cursor: pointer;
+				width: calc(100% - 110px);
+			}
+		}
+	}
+
+	.el-timeline {
+		margin-top: 10px;
+		height: calc(100% - 52px);
+	}
+	.war-content {
+		cursor: pointer;
+	}
+
+	.text {
+		font-size: 14px;
+	}
+
+	.item {
+		padding: 16px 0;
+		span:nth-child(1) {
+			color: #f87a38;
+		}
+		span:nth-child(2) {
+			color: #606266;
+			line-height: 2;
+		}
+	}
+	.el-carousel__item {
+		height: 100%;
+		& > div {
+			height: 100%;
+		}
+	}
+	#taskChart {
+		width: 100%;
+		height: 100%;
+		/deep/ & > div:nth-child(1) {
+			width: 100% !important;
+			height: 100% !important;
+		}
+	}
+</style>

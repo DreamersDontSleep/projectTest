@@ -1,0 +1,23 @@
+//登陆页面背景
+$blue-bg-img: url('~assets/images/bg.jpg');
+//登陆页面表单背景
+$blue-form-bg-img: url("~assets/images/bg.jpg");
+//登陆按钮颜色
+$blue-login-button-border: #0d8bda;
+$blue-login-button: #59c5e8;
+//字体颜色
+$blue-login-label-color: #0d8bda;
+
+
+//系统logo
+$blue-logo: url('~assets/images/sidebarLogo.png');
+//顶栏颜色
+$blue-navbar-color: linear-gradient(to top, #70d8f9, #17abda);
+//侧边栏背景颜色
+$blue-aside-color: linear-gradient(to bottom, #70d8f9,#17abda);
+//侧边栏hover颜色
+$blue-aside-hover-color: #2496c3;
+//菜单激活颜色(菜单字体颜色)
+$blue-aside-active-color: #ddf775;
+//侧边栏折叠后展开的二级菜单背景颜色
+$blue-aside-fold-color: rgb(48, 183, 226);

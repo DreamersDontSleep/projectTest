@@ -1,0 +1,538 @@
+<template>
+	<div>
+		<div class="search-header">
+			<el-form :inline="true" :model="searchForm" class="demo-form-inline">
+				<el-form-item label="国家：">
+					<el-select v-model="searchForm.country" placeholder="请选择国家">
+						<el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+					</el-select>
+				</el-form-item>
+				<!-- <el-form-item label="时间区间：">
+					<el-date-picker
+						v-model="searchForm.date"
+						type="monthrange"
+						format="yyyy"
+						range-separator="至"
+						start-placeholder="开始日期"
+						end-placeholder="结束日期"
+						align="right"
+					>
+					</el-date-picker>
+				</el-form-item> -->
+				<el-form-item>
+					<el-button @click="search">查询</el-button>
+				</el-form-item>
+			</el-form>
+		</div>
+
+		<div class="main-content">
+			<div class="carousel">
+				<el-scrollbar :native="false" :noresize="false">
+					<div class="content">
+						<div class="chart">
+							<div class="title">年龄分布</div>
+							<div class="age">
+								<div class="age-chart">
+									<el-scrollbar :native="false" :noresize="false" class="ageData">
+										<el-row style="margin-top: 20px" v-for="(item, index) in sbData" :key="index">
+											<el-col :style="{ width: '46%' }" :span="10" align="right">
+												<span class="left-title">{{ item.maleCount }}</span>
+												<span class="male" :style="{ width: item.maleWidth }"></span>
+											</el-col>
+											<el-col :style="{ width: '8%' }" :span="4">
+												<span class="age-part">{{ item.name }}</span>
+											</el-col>
+											<el-col :style="{ width: '46%' }" :span="10" align="left">
+												<span class="female" :style="{ width: item.femaleWidth }"></span>
+												<span class="right-title">{{ item.femaleCount }}</span>
+											</el-col>
+										</el-row>
+									</el-scrollbar>
+								</div>
+							</div>
+						</div>
+						<el-divider direction="vertical"></el-divider>
+						<div class="info">
+							<div class="info-title">信息统计</div>
+							<div class="info-legend">
+								<div v-for="(color, name) in colorList" :key="color">
+									<span :style="{ 'background-color': color }" class="legend"></span>
+									<span>{{ name }}</span>
+								</div>
+							</div>
+							<el-scrollbar :native="false" :noresize="false">
+								<ul>
+									<li
+										v-for="(item, index) in featureEssay"
+										:key="item.uuid"
+										@click="showEssay(item, item.type)"
+									>
+										<el-tooltip
+											v-if="item.type.length >= 4"
+											class="title"
+											effect="dark"
+											:content="item.type"
+											placement="left"
+										>
+											<span :class="['title',{'socialEnvironment':item.type=='社会环境','culturalTradition':item.type=='文化传统','religiousBelief':item.type=='宗教信仰','nationalCharacteristics':item.type=='民族特征'}]" >{{
+												item.type
+											}}</span>
+										</el-tooltip>
+										<span
+											v-else
+											:class="['title',{'socialEnvironment':item.type=='社会环境','culturalTradition':item.type=='文化传统','religiousBelief':item.type=='宗教信仰','nationalCharacteristics':item.type=='民族特征'}]"
+										
+											>{{item.type}}</span
+										>
+										<span>{{ item.time + "&nbsp" + item.content }}</span>
+									</li>
+								</ul>
+							</el-scrollbar>
+								<el-pagination
+								:pager-count="5"
+								style="text-align: right;margin-top: 12px;"
+								background
+
+								@size-change="reportSizeChange"
+								@current-change="reportCurrentChange"
+								:current-page="pageNum"
+								:page-sizes="[20, 30, 50, 80]"
+								layout="sizes, prev, pager, next"
+								:total="reportTotal"
+							>
+							</el-pagination>
+						</div>
+					</div>
+
+					<div class="employment">
+						<!-- <el-divider></el-divider> -->
+						<span class="single-title">就业率</span>
+						<ve-line
+							:data="employmentData"
+							:judge-width="true"
+							:colors="colors"
+							:resizeable="true"
+							:extend="employmentExtend"
+							:legend="legend"
+							:tooltip="lineTooltip"
+							:xAxis="xAxisMonth"
+							:yAxis="yAxisRatio"
+							:grid="grid"
+						></ve-line>
+					</div>
+				</el-scrollbar>
+			</div>
+		</div>
+		<!--        文章-->
+		<el-dialog class="read-dialog" :title="readTitle" :visible.sync="textDialogVisible" width="800px">
+			<div class="read-content">
+				<span class="read-text">{{ dialogText }}</span>
+			</div>
+		</el-dialog>
+	</div>
+</template>
+
+<script>
+	import { colors } from "config/base.js";
+	import mixin from "components/mixins.vue";
+
+	import { sliceShow } from "utils/common.js";
+	import { getCountryList } from "api/common.js";
+	import { getAge, getEmployment, getSocialInfo } from "api/social.js";
+
+	export default {
+		name: "Activity",
+		mixins: [mixin],
+		data() {
+			this.employmentExtend = {
+				yAxis: {
+					min: "dataMin",
+				},
+			};
+			this.colorMatch = {
+				社会环境: colors[0],
+				宗教信仰: colors[1],
+				文化传统: colors[2],
+				民族特征: colors[3],
+			};
+			this.match = {
+				"10": "暂无数据",
+				"2": "社会环境",
+				"3": "宗教信仰",
+				"0": "文化传统",
+				"1": "民族特征",
+			};
+			return {
+				countryList: [],
+				total: 0,
+				textDialogVisible: false,
+				readTitle: "",
+				dialogText: "",
+				searchForm: {
+					country: "",
+					// date: "",
+				},
+				chartSettings: {
+					yAxisType: ["percent"],
+				},
+				employmentData: {
+					columns: [],
+					rows: [],
+				},
+				SbData: [],
+				featureEssay: [{ country: "无", content: "暂无数据", time: "" }],
+			
+					pageNum: 1,
+					pageSize:20,
+				
+				reportTotal: 0,
+			};
+		},
+		computed: {
+			colorList() {
+				return this.colorMatch;
+			},
+			sbData() {
+				if (this.SbData.length === 0) {
+					return [
+						{
+							name: "无",
+							maleWidth: "50%",
+							femaleWidth: "50%",
+							maleCount: 0,
+							femaleCount: 0,
+						},
+					];
+				} else {
+					let finalData = this.SbData.map((cur) => {
+						let male;
+						let femal;
+						if (!cur.maleCount) {
+							if (!cur.femaleCount) {
+								male = "50%";
+								femal = "50%";
+							} else {
+								male = "0";
+								femal = "76%";
+							}
+						} else {
+							if (!cur.femaleCount) {
+								male = "76%";
+								femal = "0";
+							} else {
+								let count = Number(cur.maleCount) + Number(cur.femaleCount);
+								male = Number(cur.maleCount / count) * 76 + "%";
+								femal = Number(cur.femaleCount / count) * 76 + "%";
+							}
+						}
+						return {
+							name: cur.name,
+							maleWidth: male,
+							femaleWidth: femal,
+							maleCount: cur.maleCount,
+							femaleCount: cur.femaleCount,
+						};
+					}).reverse();
+					return finalData;
+				}
+			},
+			
+		},
+		created() {
+			getCountryList().then((res) => {
+				this.countryList = res.data;
+				this.searchForm.country = "美国";
+				this.getAgeData(this.getSearchData());
+				this.getEmploymentData(this.getSearchData());
+				this.getSocialInfoData(this.getSearchData());
+			});
+		},
+		methods: {
+			//展示文章
+			showEssay(content, name) {
+				this.textDialogVisible = true;
+				this.readTitle = name + " - " + content.country;
+				this.dialogText = content.content;
+			},
+			search() {
+				this.getAgeData(this.getSearchData());
+				this.getEmploymentData(this.getSearchData());
+				this.getSocialInfoData(this.getSearchData());
+			},
+			getSearchData() {
+				// let startTime = this.searchForm.date[0];
+				// let endTime = this.searchForm.date[1];
+				let searchData = {
+					country: this.searchForm.country,
+					// startTime: startTime ? this.$moment(startTime).format("YYYY") : "",
+					// endTime: endTime ? this.$moment(endTime).format("YYYY") : "",
+				};
+				return searchData;
+			},
+			//获取年龄分段
+			getAgeData(data) {
+				getAge(data)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.SbData = [
+								{
+									name: "无",
+									maleCount: 0,
+									femaleCount: 0,
+								},
+							];
+							return;
+						}
+						this.SbData = res.data.map((cur) => {
+							return {
+								name: cur.name,
+								maleCount: cur.maleCount,
+								femaleCount: cur.femaleCount,
+							};
+						});
+					})
+					.catch(() => {
+						this.SbData = [
+							{
+								name: "无",
+								maleCount: 0,
+								femaleCount: 0,
+							},
+						];
+					});
+			},
+			// 获取信息
+			getSocialInfoData() {
+				let params={
+					 country: this.searchForm.country, 
+					 parentType: "社会特征", 
+					 pageNum:this.pageNum,
+					 pageSize:this.pageSize
+				}
+				getSocialInfo(params)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.featureEssay = [
+								{
+									title: "无数据",
+									type: 10,
+								},
+							];
+							return;
+						}
+						//取出所有的类别
+						this.featureEssay = [];
+						//取出所有的信息
+						console.log(res);
+						this.reportTotal=res.data.total
+						let info= res.data.list
+						// let info = Object.values(res.data);
+						// console.log(info);
+						info.forEach(item=>{
+								let type = this.match[String(item.childType)];
+								this.featureEssay.push(Object.assign(item, { type }));
+						})
+						console.log(this.featureEssay);
+						
+						// for (let key of info) {
+						// 	// console.log(key);
+							
+						// 	key.forEach((cur) => {
+						// 		let type = this.match[String(cur.childType)];
+						// 		this.featureEssay.push(Object.assign(cur, { type }));
+						// 	});
+						// }
+						// console.log(this.featureEssay,'q');
+						
+					})
+					.catch(() => {
+						this.featureEssay = [
+							{
+								title: "无",
+								type: 10,
+							},
+						];
+					});
+			},
+			reportSizeChange(val) {
+				this.pageSize = val;
+				this.pageNum = 1;
+				this.getSocialInfoData();
+			},
+			reportCurrentChange(val) {
+				this.pageNum = val;
+				this.getSocialInfoData();
+			},
+			//获取就业率
+			getEmploymentData() {
+				getEmployment()
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.employmentData.columns = ["暂无数据", "数值"];
+							this.employmentData.rows = [
+								{
+									暂无数据: "暂无数据",
+									数值: 0,
+								},
+							];
+							return;
+						}
+						let allData = sliceShow(res.data);
+						this.employmentData.columns = ["日期", ...Object.keys(allData)];
+						let dateArr = [];
+						//获取到所有的日期
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (!dateArr.includes(cur.publish_time)) {
+									dateArr.push(cur.publish_time);
+								}
+							});
+						}
+						let gdpArr = [];
+						for (let key in allData) {
+							let value = allData[key];
+							value.forEach((cur) => {
+								if (dateArr.includes(cur.publish_time)) {
+									gdpArr.push({
+										日期: cur.publish_time,
+										[cur.country]: cur.value,
+									});
+								}
+							});
+						}
+						this.employmentData.rows = this.concatByAr(gdpArr);
+					})
+					.catch(() => {
+						this.employmentData.columns = ["暂无数据", "数值"];
+						this.employmentData.rows = [
+							{
+								暂无数据: "暂无数据",
+								数值: 0,
+							},
+						];
+					});
+			},
+			//数组对象按照某个参数合并
+			concatByAr(arr) {
+				var temp = [];
+				arr.forEach(function(item, index) {
+					var skey = item["日期"];
+					if (typeof temp[skey] == "undefined") {
+						temp[skey] = item;
+					} else {
+						for (var k in item) {
+							temp[skey][k] = item[k];
+						}
+					}
+				});
+				var result = [];
+				for (var i in temp) {
+					result.push(temp[i]);
+				}
+				return result;
+			},
+			unique(arr) {
+				let hashTable = {};
+				let newArr = [];
+				for (let i = 0, l = arr.length; i < l; i++) {
+					if (!hashTable[arr[i]]) {
+						hashTable[arr[i]] = true;
+						newArr.push(arr[i]);
+					}
+				}
+				return newArr;
+			},
+		},
+	};
+</script>
+
+<style scoped lang="scss">
+	ul {
+		margin: 0;
+		padding: 0;
+	}
+
+	.main-content {
+		font-size: 16px;
+
+		.employment {
+			margin-top: 12px;
+		}
+
+		.age-chart {
+			color: #303133;
+			padding: 0 12px;
+			.ageData{
+				/deep/.el-scrollbar__wrap{
+					margin-bottom: 0!important;
+				}
+			}
+			span {
+				vertical-align: middle;
+				display: inline-block;
+				height: 24px;
+			}
+
+			.age-part {
+				width: 100%;
+				text-align: center;
+				color: #ff8130;
+			}
+
+			.male,
+			.female {
+				border-radius: 2px;
+				color: white;
+				box-sizing: border-box;
+			}
+
+			.male {
+				text-align: right;
+				padding-right: 32px;
+				background-color: #D53A35;
+			}
+
+			.female {
+				padding-left: 32px;
+				background-color: #2F4554;
+			}
+		}
+	}
+
+	.carousel {
+		height: 100%;
+	}
+
+	.left-title {
+		margin-right: 4px;
+	}
+
+	.right-title {
+		margin-left: 4px;
+	}
+	.info {
+		height: 560px;
+	}
+
+	.carousel .el-divider.el-divider--vertical {
+		height: auto;
+	}
+	.chart,
+	.age,
+	.age-chart {
+		height: 100%;
+	}
+	.socialEnvironment{
+		background-color: #D53A35!important;
+	}
+	.religiousBelief{
+		background-color: #2F4554!important;
+	}
+	.culturalTradition{
+		background-color: #61A0A8!important;
+	}
+	.nationalCharacteristics{
+		background-color: #D48265!important;
+	}
+</style>

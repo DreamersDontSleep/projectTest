@@ -1,0 +1,375 @@
+<template>
+	<div>
+		<div class="system-title">
+			<span class="logo"></span>
+			<span class="title">{{ isCollapse ? "" : "智能情报分析系统" }}</span>
+			<!-- {{ isCollapse ? '' : '智能情报分析系统' }} -->
+		</div>
+		<el-scrollbar :native="false" :noresize="false">
+			<el-menu
+				:collapse-transition="true"
+				:default-active="activeMenu"
+				@open="handleOpen"
+				@close="handleClose"
+				@select="handleSelectMenu"
+				:collapse="isCollapse"
+				background-color="#fff"
+				text-color="#fff"
+				active-text-color="#fff"
+			>
+				<fragment v-for="menuItem in menus" :key="menuItem.index">
+					<el-submenu
+						v-if="menuItem.children && menuItem.children.length"
+						:index="menuItem.index"
+						:key="menuItem.index"
+					>
+						<template slot="title">
+							<i :class="['fa', menuItem.icon]"></i>
+							<span slot="title">{{ menuItem.name }}</span>
+						</template>
+						<fragment v-for="item in menuItem.children" :key="item.index">
+							<el-submenu v-if="item.children && item.children.length" :index="item.index">
+								<template slot="title">
+									<i :class="['fa', item.icon]"></i>
+									<span slot="title">{{ item.name }}</span>
+								</template>
+								<el-menu-item v-for="thItem in item.children" :index="thItem.index" :key="thItem.index">
+									<i :class="['fa', thItem.icon]"></i>
+									<span slot="title">{{ thItem.name }}</span></el-menu-item
+								>
+							</el-submenu>
+							<el-menu-item v-else :index="item.index">
+								<i :class='"el-icon-"+item.index'></i>
+								<span slot="title">{{ item.name }}</span>
+							</el-menu-item>
+						</fragment>
+					</el-submenu>
+					<el-menu-item v-else :index="menuItem.index">
+						<i :class="['fa', menuItem.icon]"></i>
+						<span slot="title">{{ menuItem.name }}</span>
+					</el-menu-item>
+				</fragment>
+			</el-menu>
+		</el-scrollbar>
+	</div>
+</template>
+
+<script>
+	import { Fragment } from "vue-fragment";
+
+	export default {
+		name: "Sidebar",
+		components: { Fragment },
+		props: {
+			foldStaus: {
+				type: Boolean,
+				default: false,
+			},
+		},
+		data() {
+			return {
+				isCollapse: false,
+				activeMenu: "economic",
+				menus: [
+					{
+						index: "politics",
+						name: "政情分析",
+						icon: "fa-university",
+						children: [
+							// {
+							// 	index: "general",
+							// 	name: "综合信息",
+							// },
+							{
+								index: "party",
+								name: "综合信息",
+							},
+							{
+								index: "election",
+								name: "选情信息",
+							},
+							{
+								index: "strategy",
+								name: "战略信息",
+							},
+						],
+					},
+					{
+						index: "militia",
+						name: "军情分析",
+						icon: "fa-globe",
+						children: [
+							{
+								index: "tracking",
+								name: "军情架构",
+							},
+							{
+								index: "activity",
+								name: "军事活动",
+							},
+							{
+								index: "opinion",
+								name: "涉军舆情",
+							},
+						],
+					},
+					{
+						index: "social",
+						name: "社情分析",
+						icon: "fa-shield",
+						children: [
+							{
+								index: "feature",
+								name: "社会特征",
+							},
+							{
+								index: "contradiction",
+								name: "社会矛盾",
+							},
+							{
+								index: "safety",
+								name: "社会治安",
+							},
+						],
+					},
+					{
+						index: "polls",
+						name: "民意分析",
+						icon: "fa-tags",
+						children: [
+							{
+								index: "ideology",
+								name: "意识形态",
+							},
+							{
+								index: "cultural",
+								name: "文化认同",
+							},
+							{
+								index: "war",
+								name: "战争认识",
+							},
+							{
+								index: "people",
+								name: "民意反映",
+							},
+						],
+					},
+					{
+						index: "economic",
+						name: "经济趋势",
+						icon: "fa-line-chart",
+					},
+					{
+						index: "diplomatic",
+						name: "外交分析",
+						icon: "fa-tags",
+						children: [
+							{
+								index: "agency",
+								name: "外交机构",
+							},
+							{
+								index: "consulate",
+								name: "驻外领馆",
+							},
+							{
+								index: "analysis",
+								name: "外交动态",
+							},
+						],
+					},
+					{
+						index: "history",
+						name: "历史分析",
+						icon: "fa-tags",
+						children: [
+							{
+								index: "person",
+								name: "历史人物",
+							},
+							{
+								index: "oldwar",
+								name: "历史战争",
+							},
+							{
+								index: "oldevent",
+								name: "历史事件",
+							},
+							{
+								index: "dynasty",
+								name: "历史朝代",
+							},
+						],
+					},
+					{
+						index: "system",
+						name: "系统管理",
+						icon: "fa-tags",
+						children: [
+							{
+								index: "user",
+								name: "用户管理",
+							},
+						]
+					},
+				],
+			};
+		},
+
+		watch: {
+			foldStaus(val) {
+				this.isCollapse = val;
+			},
+			$route: {
+				handler: function(val, oldVal) {
+					this.activeMenu = this.getLast(val.path);
+				},
+				// 深度观察监听
+				deep: true,
+			},
+		},
+		mounted() {
+			let refreRoute = sessionStorage.getItem("refreshRoute");
+			if (refreRoute) {
+				this.activeMenu = this.getLast(refreRoute);
+			}
+		},
+		methods: {
+			getLast(str) {
+				var index = str.lastIndexOf("\/");
+				return str.substring(index + 1, str.length);
+			},
+			handleOpen(key, keyPath) {
+				// console.log(key, keyPath, '关闭');
+			},
+			handleClose(key, keyPath) {
+				// console.log(key, keyPath, '展开');
+			},
+			handleSelectMenu(index, indexPath) {
+				// console.log(index, '选中');
+				// console.log(indexPath, '选中归属');
+				this.$router.push(index);
+			},
+		},
+	};
+</script>
+
+<style scoped lang="scss">
+	@import "config/base.scss";
+
+	//隐藏el-scrollbar的横向滚动条
+	.el-scrollbar__wrap {
+		overflow-x: hidden;
+		//background-color: rgb(17, 38, 69);
+
+		.el-menu {
+			border-right: none;
+			// background-color: transparent !important;
+			// background: #fb8724;
+		}
+	}
+
+	.system-title {
+		height: 50px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		font-size: 20px;
+		color: white;
+		background: navbar-color();
+
+		.logo {
+			width: 28px;
+			height: 28px;
+			display: inline-block;
+			background-size: cover;
+			background-repeat: no-repeat;
+			background-image: logo();
+		}
+
+		.title {
+			padding-left: 5px;
+			letter-spacing: 1px;
+			font-family: Avenir, Helvetica Neue, Arial, Helvetica, sans-serif;
+			font-weight: 800;
+		}
+	}
+
+	i {
+		margin-right: 8px;
+	}
+
+	/deep/ .el-submenu {
+		background-color: transparent !important;
+	}
+
+	/deep/ .el-submenu__title {
+		background-color: transparent !important;
+		transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+
+		&.is-active {
+			color: aside-active-color() !important;
+		}
+
+		&:hover {
+			background-color: aside-hover-color() !important;
+		}
+	}
+
+	/deep/ .el-menu-item {
+		background-color: transparent !important;
+		transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+
+		&.is-active {
+			color: aside-active-color() !important;
+		}
+
+		&:hover {
+			background-color: aside-hover-color() !important;
+		}
+	}
+
+	/deep/ .el-submenu__title {
+		background-color: transparent !important;
+
+		i {
+			color: white;
+		}
+	}
+
+	/deep/ .el-menu.el-menu--popup-right-start {
+		background-color: aside-fold-color() !important;
+	}
+
+	.el-menu--popup {
+		background-color: aside-fold-color() !important;
+
+		.el-menu-item {
+			background-color: aside-fold-color() !important;
+
+			&:hover {
+				background-color: aside-hover-color() !important;
+			}
+
+			i,
+			span {
+				color: white;
+			}
+		}
+	}
+
+	/deep/ .el-scrollbar {
+		background-color: transparent;
+		height: calc(100% - 50px);
+		/*background-image: url('../../assets/images/index-left-bg.jpg');*/
+
+		.el-scrollbar__wrap {
+			background-color: transparent;
+
+			.el-scrollbar__view {
+				background-color: transparent;
+			}
+		}
+	}
+</style>

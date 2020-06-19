@@ -1,0 +1,61 @@
+import 'babel-polyfill'
+import Vue from "vue";
+import 'normalize.css'
+// import store from "./store";
+import router from "./router";
+import ElementUI from "element-ui"; //使用element-ui
+import "element-ui/lib/theme-chalk/index.css";
+
+import _ from 'lodash'
+
+import 'utils/directives'
+import * as check from 'utils/check'
+
+import 'font-awesome/css/font-awesome.min.css'
+import "styles/index.scss"
+import "styles/element-ui.scss"
+// import "config/base.scss"
+import "styles/common.scss"
+
+import moment from 'moment'
+import echarts from "echarts";
+import VCharts from 'v-charts'
+import App from "./App.vue";
+//组织架构
+import Vue2OrgTree from 'vue2-org-tree'
+
+Vue.use(Vue2OrgTree)
+
+Vue.use(VCharts);
+
+Vue.use(ElementUI);
+
+
+function unload() {
+    sessionStorage.setItem('refreshRoute', window.location.hash.replace('#', ''));
+}
+
+//监听页面刷新
+window.addEventListener("beforeunload", unload);
+
+Object.defineProperty(Vue.prototype, "$unload", {value: unload});
+Object.defineProperty(Vue.prototype, "_", {value: _});
+Object.defineProperty(Vue.prototype, "$echarts", {value: echarts});
+Object.defineProperty(Vue.prototype, "$moment", {value: moment});
+Object.defineProperty(Vue.prototype, "$check", {value: check});
+
+router.beforeEach((to, from, next) => {
+    console.log(to);
+    if (to.path === "/") {
+        next("/IIAS/economic");
+    } else {
+        next();
+    }
+})
+
+Vue.config.productionTip = false;
+
+new Vue({
+    router,
+    render: h => h(App)
+}).$mount("#app");

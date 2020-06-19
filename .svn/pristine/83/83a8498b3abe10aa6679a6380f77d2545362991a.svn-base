@@ -1,0 +1,433 @@
+<template>
+    <div>
+        <div class="search-header">
+            <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+                <el-form-item label="国家：">
+                    <el-select v-model="searchForm.countryArea" placeholder="请选择国家">
+                        <el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+                    </el-select>
+                </el-form-item>
+                <!-- <el-form-item label="时间区间：">
+                    <el-date-picker
+                            v-model="searchForm.date"
+                            type="monthrange"
+                            format="yyyy-MM"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            align="right">
+                    </el-date-picker>
+                </el-form-item> -->
+                <el-form-item>
+                    <el-button @click="search">查询</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+        <div class="main-content">
+            <el-scrollbar
+                    :native="false"
+                    :noresize="false">
+                <div class="military">
+                    <span class="single-title">军事活动：</span>
+                    <span>点击图形显示详情</span>
+                    <ve-histogram :colors="colors"
+                                  :judge-width=true
+                                  :resizeable=true
+                                  :data="chartData"
+                                  :grid="grid"
+                                  :tooltip="barTooltip"
+                                  :extend="militaryExtend"
+                                  :events="chartEvents"></ve-histogram>
+                </div>
+                <div class="no-military">
+                    <span class="single-title">非军事活动：</span>
+                    <ve-bar :colors="colors"
+                            :judge-width=true
+                            :resizeable=true
+                            :data="chartBarData"
+                            :grid="grid"
+                            :tooltip="barTooltip"
+                            :settings="chartBarSettings"
+                            :extend="noMilitaryExtend"
+                            :events="chartBarEvents"></ve-bar>
+                </div>
+            </el-scrollbar>
+        </div>
+        <!--军事活动-->
+        <el-dialog
+                :title="titleInfo"
+                :visible.sync="dialogVisible"
+                width="800px">
+            <div class="staffing">
+                <div class="military-table">
+                    <el-table
+                            :data="tableData"
+                            height="360"
+                            border
+                            style="width: 100%">
+                        <el-table-column
+                                align="center"
+                                label="日期"
+                                width="180">
+                            <template slot-scope="scope">
+                                <span>{{ scope.row.createTime ? $moment(scope.row.createTime).format('YYYY-MM-DD') : '无' }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                align="center"
+                                prop="title"
+                                :label="labelName + '名称'"
+                                width="180">
+                        </el-table-column>
+                        <el-table-column
+                                align="center"
+                                prop="content"
+                                label="详细信息">
+                        </el-table-column>
+                    </el-table>
+                    <el-pagination
+                            style="text-align: right"
+                            @size-change="handleSizeChange"
+                            @current-change="handleCurrentChange"
+                            :current-page.sync="currentPage"
+                            :page-sizes="[10, 20, 30, 40]"
+                            :page-size="10"
+                            layout="total, sizes, prev, pager, next, jumper"
+                            :total="total">
+                    </el-pagination>
+                </div>
+            </div>
+        </el-dialog>
+
+    </div>
+</template>
+
+<script>
+    import mixin from "components/mixins";
+    import {getCountryList} from 'api/common.js'
+    import {getMilitaryActStatistics, getMilActivities} from 'api/military.js'
+
+    export default {
+        name: 'Activity',
+        mixins: [mixin],
+        data() {
+            this.militaryExtend = {
+                series: {
+                    type: 'bar',
+                    barMaxWidth: '20',
+                    barMinWidth: '10',
+                    barMinHeight: '10'
+                },
+                xAxis: {
+                    name: '日期',
+                    nameLocation: 'end',
+                    nameGap: 4,
+                    minInterval: 2,
+                    axisTick: {
+                        alignWithLabel: true
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            type: 'dashed',
+                        }
+                    }
+                },
+                yAxis: {
+                    name: '次数',
+                    type: 'value',
+                    nameLocation: 'end',
+                    nameGap: 4,
+                    minInterval: 2,
+                    axisTick: {
+                        alignWithLabel: true
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            type: 'dashed',
+                        }
+                    }
+                },
+            };
+            this.noMilitaryExtend = {
+                series: {
+                    type: 'bar',
+                    barMaxWidth: '20',
+                    barMinWidth: '10',
+                    barMinHeight: '10'
+                },
+                xAxis: {
+                    name: '次数',
+                    nameLocation: 'end',
+                    nameGap: 4,
+                    minInterval: 2,
+                    axisTick: {
+                        alignWithLabel: true
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            type: 'dashed',
+                        }
+                    }
+                },
+                yAxis: {
+                    name: '日期',
+                    nameLocation: 'end',
+                    nameGap: 4,
+                    minInterval: 2,
+                    axisTick: {
+                        alignWithLabel: true
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            type: 'dashed',
+                        }
+                    }
+                }
+            };
+            return {
+                titleInfo:'',
+                militaryList: {
+                    '战争': 4,//战争
+                    '战斗': 5,//战斗
+                    '战役': 6//战役
+                },
+                noMilitaryList: {
+                    "军演": 7, //军演
+                    "维和": 8,//维和
+                    "反恐": 9,//反恐
+                    "救援": 10,//救援
+                    "巡航": 11,//巡航
+                    "护航": 12,//护航
+                    "军事访问": 13,//军事访问
+                    "军事论坛": 14,//军事论坛
+                },
+                countryList: [],
+                total: 0,
+                currentPage: 1,
+                searchForm: {
+                    countryArea: '',
+                    // date: '',
+                },
+                chartData: {
+                    columns: ['日期', '战争', '战斗', '战役'],
+                    rows: []
+                },
+                chartEvents: {
+                    click: this.militaryEvent
+                },
+                chartSearchData: {},
+                info: {},
+                //非军事活动
+                chartBarSettings: {
+                    stack: {
+                        'xxx': ['军演', '维和', '反恐', '救援', '巡航', '护航', '军事访问', '军事论坛']
+                    }
+                },
+                chartBarEvents: {
+                    click: this.nomilitaryEvent
+                },
+                chartBarSearchData: {},
+                chartBarData: {
+                    columns: ['日期', '军演', '维和', '反恐', '救援', '巡航', '护航', '军事访问', '军事论坛'],
+                    rows: []
+                },
+                dialogVisible: false,
+                labelName: '',
+                tableData: [],
+                noTableData: [],
+            }
+        },
+        created() {
+            getCountryList().then(res => {
+                this.countryList = res.data;
+                // this.searchForm.countryArea = res.data[0];
+                this.searchForm.countryArea = '美国';
+                this.getMilitary(this.getSearchData());
+                this.getNoMilitary(this.getSearchData());
+            });
+
+        },
+        methods: {
+            militaryEvent(e) {
+                console.log(e);
+                this.dialogVisible = true;
+                this.titleInfo = '军事活动';
+                this.labelName = e.seriesName;
+                let search = this.getSearchData();
+                this.chartSearchData = {
+                    startTime: this.$moment(e.name).startOf('month').format('YYYY-MM-DD'),
+                    endTime: this.$moment(e.name).endOf('month').format('YYYY-MM-DD'),
+                    pageNum: 1,
+                    pageSize: 10,
+                }
+                this.info = {
+                    countryArea: search.countryArea,
+                    type: 2,
+                    subType: this.militaryList[e.seriesName],
+                }
+                this.getMilActivitiesData(this.chartSearchData, this.info);
+            },
+            nomilitaryEvent(e) {
+                this.dialogVisible = true;
+                this.titleInfo = '非军事活动';
+                this.labelName = e.seriesName;
+                let search = this.getSearchData();
+                this.chartSearchData = {
+                    startTime: this.$moment(e.name).startOf('month').format('YYYY-MM-DD'),
+                    endTime: this.$moment(e.name).endOf('month').format('YYYY-MM-DD'),
+                    pageNum: 1,
+                    pageSize: 10,
+                }
+                this.info = {
+                    countryArea: search.countryArea,
+                    type: 4,
+                    subType: this.noMilitaryList[e.seriesName],
+                }
+                this.getNoMilActivitiesData(this.chartSearchData, this.info);
+            },
+            handleSizeChange(val) {
+                this.currentPage = 1;
+                this.chartSearchData.pageSize = val;
+                this.getMilActivitiesData(this.chartSearchData, this.info);
+            },
+            handleCurrentChange(val) {
+                this.chartSearchData.pageNum = val;
+                this.getNoMilActivitiesData(this.chartSearchData, this.info);
+            },
+            search() {
+                this.getMilitary(this.getSearchData());
+                this.getNoMilitary(this.getSearchData());
+            },
+            getSearchData() {
+                // let startTime = this.searchForm.date[0];
+                // let endTime = this.searchForm.date[1];
+                let searchData = {
+                    countryArea: this.searchForm.countryArea,
+                    // startTime: startTime ? this.$moment(startTime).format('YYYY-MM') : '',
+                    // endTime: endTime ? this.$moment(endTime).format('YYYY-MM') : '',
+                };
+                return searchData
+            },
+            getMilitary(data) {
+                getMilitaryActStatistics(Object.assign(data, {type: 2})).then(res => {
+                    if (this.$check.isNullData(res)) {
+                        this.chartData.rows = [{
+                            '日期': '暂无数据',
+                            '战争': 0,
+                            '战斗': 0,
+                            '战役': 0
+                        }];
+                        return
+                    }
+                    let resData = res.data;
+                    this.chartData.rows = [];
+                    for (let key in resData) {
+                        this.chartData.rows.push({
+                            '日期': key,
+                            '战争': resData[key].war,
+                            '战斗': resData[key].fighting,
+                            '战役': resData[key].battle
+                        });
+                    }
+                }).catch(() => {
+                    this.chartData.rows = [{
+                        '日期': '暂无数据',
+                        '战争': 0,
+                        '战斗': 0,
+                        '战役': 0
+                    }];
+                })
+            },
+            getNoMilitary(data) {
+                getMilitaryActStatistics(Object.assign(data, {type: 4})).then(res => {
+                    if (this.$check.isNullData(res)) {
+                        this.chartBarData.rows = [{
+                            '日期': '暂无数据',
+                            '军演': 0,
+                            '维和': 0,
+                            '反恐': 0,
+                            '救援': 0,
+                            '巡航': 0,
+                            '护航': 0,
+                            '军事访问': 0,
+                            '军事论坛': 0,
+                        }];
+                        return
+                    }
+                    let resData = res.data;
+                    console.log(res.data);
+                    this.chartBarData.rows = [];
+                    for (let key in resData) {
+                        console.log(key);
+                        this.chartBarData.rows.push({
+                            '日期': key,
+                            '军演': resData[key]['military-exercise'],
+                            '维和': resData[key].peacekeeping,
+                            '反恐': resData[key]['anti-terrorist'],
+                            '救援': resData[key].rescue,
+                            '巡航': resData[key].cruise,
+                            '护航': resData[key]['providing-escort'],
+                            '军事访问': resData[key]['military-visit'],
+                            '军事论坛': resData[key]['military-forum'],
+                        });
+                    }
+                    // console.log(this.chartBarData.rows);
+
+                }).catch(() => {
+                    this.chartBarData.rows = [{
+                        '日期': '暂无数据',
+                        '军演': 0,
+                        '维和': 0,
+                        '反恐': 0,
+                        '救援': 0,
+                        '巡航': 0,
+                        '护航': 0,
+                        '军事访问': 0,
+                        '军事论坛': 0,
+                    }];
+                })
+            },
+            getMilActivitiesData(data, param) {
+                this.tableData = [];
+                getMilActivities(data, param).then(res => {
+                    if (this.$check.isNullData(res) || !Boolean(res.data.count)) {
+                        this.tableData = [];
+                        return
+                    }
+                    this.total = res.data.count;
+                    this.tableData = res.data.infos;
+                }).catch(() => {
+                    this.tableData = [];
+                })
+            },
+            getNoMilActivitiesData(data, param) {
+                this.tableData = [];
+                getMilActivities(data, param).then(res => {
+                    if (this.$check.isNullData(res) || !Boolean(res.data.count)) {
+                        this.tableData = [];
+                        return
+                    }
+                    this.total = res.data.count;
+                    this.tableData = res.data.infos;
+                }).catch(() => {
+                    this.tableData = [];
+                })
+            },
+
+
+        }
+    }
+</script>
+
+<style scoped lang="scss">
+
+    .main-content {
+        font-size: 16px;
+        color: #f8690d;
+
+        .military, .no-military {
+            margin-top: 12px;
+        }
+    }
+
+</style>

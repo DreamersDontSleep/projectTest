@@ -1,0 +1,110 @@
+//设置主题orange或blue
+$themes: orange;
+
+@import './themes/themes-orange';
+@import './themes/themes-blue';
+
+//登陆页面背景
+@function bg-img() {
+  @if $themes == orange {
+    @return $orange-bg-img
+  } @else {
+    @return $blue-bg-img
+  }
+}
+
+//登陆页面表单背景
+@function form-bg-img() {
+  @if $themes == orange {
+    @return $orange-form-bg-img
+  } @else {
+    @return $blue-form-bg-img
+  }
+}
+
+//登陆按钮颜色
+@function login-button-border() {
+  @if $themes == orange {
+    @return $orange-login-button-border
+  } @else {
+    @return $blue-login-button-border
+  }
+}
+
+//登陆按钮边框颜色
+@function login-button() {
+  @if $themes == orange {
+    @return $orange-login-button
+  } @else {
+    @return $blue-login-button
+  }
+}
+
+//登陆处字体颜色
+@function login-label-color() {
+  @if $themes == orange {
+    @return $orange-login-label-color
+  } @else {
+    @return $blue-login-label-color
+  }
+}
+
+
+//系统logo
+@function logo() {
+  @if $themes == orange {
+    @return $orange-logo
+  } @else {
+    @return $blue-logo
+  }
+}
+
+//顶栏颜色
+@function navbar-color() {
+  @if $themes == orange {
+    @return $orange-navbar-color
+  } @else {
+    @return $blue-navbar-color
+  }
+}
+
+//侧边背景
+@function aside-color() {
+  @if $themes == orange {
+    @return $orange-aside-color
+  } @else {
+    @return $blue-aside-color
+  }
+}
+
+//侧边栏hover颜色
+@function aside-hover-color() {
+  @if $themes == orange {
+    @return $orange-aside-hover-color
+  } @else {
+    @return $blue-aside-hover-color
+  }
+}
+
+//菜单激活颜色
+@function aside-active-color() {
+  @if $themes == orange {
+    @return $orange-aside-active-color
+  } @else {
+    @return $blue-aside-active-color
+  }
+}
+
+//侧边栏折叠后展开的二级菜单背景颜色
+@function aside-fold-color() {
+  @if $themes == orange {
+    @return $orange-aside-fold-color
+  } @else {
+    @return $blue-aside-fold-color
+  }
+}
+
+
+
+
+

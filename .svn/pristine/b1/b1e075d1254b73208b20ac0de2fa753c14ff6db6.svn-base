@@ -1,0 +1,162 @@
+<template>
+	<div>
+		<div class="search-header">
+			<el-form :inline="true" :model="searchForm" class="demo-form-inline">
+				<el-form-item label="国家：">
+					<el-select v-model="searchForm.country" placeholder="请选择国家">
+						<el-option label="全部" value=""></el-option>
+						<el-option v-for="item in countryList" :key="item" :label="item" :value="item"></el-option>
+					</el-select>
+				</el-form-item>
+				<el-form-item>
+					<el-button @click="search">查询</el-button>
+				</el-form-item>
+			</el-form>
+		</div>
+		<div class="main-content">
+			<div class="carousel">
+				<div class="content">
+					<div class="chart">
+						<div class="title">政党统计</div>
+						<ve-pie
+							height="100%"
+							:judge-width="true"
+							:resizeable="true"
+							:colors="colors"
+							:legend="legend"
+							:extend="extend"
+							:data="chartData"
+							:events="partyPie"
+						>
+						</ve-pie>
+					</div>
+					<el-divider direction="vertical"></el-divider>
+					<div class="info">
+						<div class="info-title">政党信息：民主党</div>
+						
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
+
+<script>
+	import { colors } from "config/base.js";
+	import { sliceShow, concatBy } from "utils/common.js";
+	import mixin from "components/mixins";
+	import { getCountryList } from "api/common.js";
+	import { getPartyDetail, getPartyProfile, getMember } from "api/politics.js";
+
+	export default {
+		name: "Party",
+		mixins: [mixin],
+		data() {
+			this.extend = {
+				series: {
+					type: "pie",
+					center: ["50%", "50%"],
+					avoidLabelOverlap: false,
+					//标签
+					label: {
+						show: true,
+						position: "outside",
+						formatter: "{b}:{d}%", //模板变量有 {a}、{b}、{c}、{d}，分别表示系列名，数据名，数据值，百分比。{d}数据会根据value值计算百分比
+					},
+				},
+			};
+			this.partyPie = {
+				click: this.partyEvent,
+			};
+			return {
+				countryList: [],
+				dialogVisible: false,
+				loading: false,
+				total: 0,
+				searchForm: {
+					country: "",
+				},
+				chartData: {
+					columns: [],
+					rows: [],
+				},
+				trendTitle: "",
+				partyDetailItems: [],
+			};
+		},
+		created() {
+			getCountryList().then((res) => {
+				this.countryList = res.data;
+				this.searchForm.country = "美国";
+				this.getPartyProfileData();
+			});
+		},
+		methods: {
+			search() {
+				this.getPartyProfileData();
+			},
+			getPartyProfileData() {
+				getPartyProfile(this.searchForm)
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.chartData.columns = ["暂无数据", "数值"];
+							this.chartData.rows = [
+								{
+									暂无数据: "暂无数据",
+									数值: 0,
+								},
+							];
+							return;
+						}
+						this.chartData.columns = ["政党", "政党人数"];
+						this.chartData.rows = [];
+						res.data[0].party.forEach((cur) => {
+							this.chartData.columns.push(cur.name);
+							this.chartData.rows.push({
+								政党: cur.name,
+								政党人数: cur.memberCount,
+							});
+						});
+					})
+					.catch(() => {
+						this.chartData.columns = ["暂无数据", "数值"];
+						this.chartData.rows = [
+							{
+								暂无数据: "暂无数据",
+								数值: 0,
+							},
+						];
+					});
+			},
+			partyEvent(e) {
+				console.log(e);
+			},
+			partyDetail(item) {
+				this.dialogVisible = true;
+				this.trendTitle = item.name;
+				getPartyDetail({ partyUuid: item.uuid })
+					.then((res) => {
+						if (this.$check.isNullData(res)) {
+							this.partyDetailItems = [];
+							return;
+						}
+						this.partyDetailItems.push(res.data);
+					})
+					.catch(() => {
+						this.partyDetailItems = [];
+					});
+			},
+		},
+	};
+</script>
+
+<style scoped lang="scss">
+	.main-content .carousel {
+		height: calc(100% - 0px);
+	}
+
+	.party-tag {
+		margin: 4px;
+		cursor: pointer;
+	}
+</style>
